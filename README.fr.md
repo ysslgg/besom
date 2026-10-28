@@ -46,6 +46,8 @@ Fichiers temporaires, caches, journaux, données d'apps orphelines, vieux instal
 - **Essai à blanc depuis le terminal** : `Besom --scan` affiche ce qui serait nettoyé puis quitte, sans rien supprimer.
 
 ### Et aussi
+- **Onglet Réglages** : transparence et style du verre, thème et couleur du fond, règles de nettoyage (âges, taille minimale), familles à analyser, dossiers à ne jamais toucher, fréquence de l'analyse automatique.
+- **Mot de passe seulement si nécessaire** : les éléments appartenant à un autre utilisateur (comme des dossiers root dans la corbeille) déclenchent la demande de mot de passe de macOS au moment du nettoyage.
 - **Vue d'ensemble du stockage** : un anneau qui montre où part ton disque (apps, documents, téléchargements, données de développement, données d'apps, corbeille, système, libre), une barre de ce que Besom peut récupérer, et tes dossiers les plus lourds.
 - **Design Liquid Glass** sur macOS 26 et plus (un rendu en matériau flou sur macOS 14 et 15), avec un graphique des éléments les plus lourds de chaque famille.
 - **Native et légère** : SwiftUI, une barre latérale des familles avec leurs tailles, une liste détaillée par famille, analyse en direct.

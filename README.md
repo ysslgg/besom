@@ -46,6 +46,8 @@ Temp files, caches, logs, orphaned app data, old installers, the Trash: Besom fi
 - **Dry run from the terminal**: `Besom --scan` prints what would be cleaned and exits, deleting nothing.
 
 ### And also
+- **Settings tab**: glass transparency and style, theme and background color, cleaning rules (ages, minimum size), families to scan, folders to never touch, automatic scan interval.
+- **Password only when needed**: items owned by another user (such as root-owned folders in the Trash) trigger macOS's own password prompt right when you clean.
 - **Storage overview**: a donut chart of where your disk goes (apps, documents, downloads, developer data, app data, Trash, system, free), a bar of what Besom can reclaim, and your largest folders.
 - **Liquid Glass design** on macOS 26 and later (a frosted-material look on macOS 14 and 15), with a bar chart of the biggest items in each family.
 - **Native and light**: SwiftUI, a sidebar of families with their sizes, a detail list per family, live scanning.
