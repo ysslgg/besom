@@ -13,6 +13,7 @@ Temp files, caches, logs, orphaned app data, old installers, the Trash: Besom fi
 [![Download Besom](https://img.shields.io/badge/%E2%AC%87%EF%B8%8E%20Download-Besom.dmg-14b8a6?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/ysslgg/besom/releases/latest/download/Besom.dmg)
 
 ![Latest version](https://img.shields.io/github/v/release/ysslgg/besom?color=14b8a6&label=version)
+![Downloads](https://img.shields.io/github/downloads/ysslgg/besom/total?color=ec4899&label=downloads)
 
 ![macOS 14+](https://img.shields.io/badge/macOS-14%2B-444?logo=apple&logoColor=white)
 ![Apple Silicon and Intel](https://img.shields.io/badge/Apple%20Silicon%20%2B%20Intel-444)
@@ -45,6 +46,8 @@ Temp files, caches, logs, orphaned app data, old installers, the Trash: Besom fi
 - **Dry run from the terminal**: `Besom --scan` prints what would be cleaned and exits, deleting nothing.
 
 ### And also
+- **Storage overview**: a donut chart of where your disk goes (apps, documents, downloads, developer data, app data, Trash, system, free), a bar of what Besom can reclaim, and your largest folders.
+- **Liquid Glass design** on macOS 26 and later (a frosted-material look on macOS 14 and 15), with a bar chart of the biggest items in each family.
 - **Native and light**: SwiftUI, a sidebar of families with their sizes, a detail list per family, live scanning.
 - **Automatic scan** at launch and every few hours while the app stays open.
 - **English or French**: follows the system language, switchable in Settings (⌘,).

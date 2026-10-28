@@ -1,4 +1,5 @@
 import SwiftUI
+import Charts
 
 func bytes(_ n: Int64) -> String {
     let f = ByteCountFormatter()
@@ -7,24 +8,52 @@ func bytes(_ n: Int64) -> String {
     return f.string(fromByteCount: n)
 }
 
+enum Page: Hashable {
+    case overview
+    case category(CategoryID)
+}
+
 struct ContentView: View {
     @ObservedObject var model: CleanerModel
-    @State private var current: CategoryID = .caches
+    @ObservedObject var storage: StorageModel
+    @State private var page: Page = {
+        // BESOM_PAGE=trash (par exemple) ouvre directement une famille : pratique pour tester l'interface.
+        if let raw = ProcessInfo.processInfo.environment["BESOM_PAGE"], let id = CategoryID(rawValue: raw) { return .category(id) }
+        return .overview
+    }()
 
     var body: some View {
         NavigationSplitView {
-            List(CategoryID.allCases, selection: $current) { id in
-                SidebarRow(model: model, id: id).tag(id)
+            List(selection: $page) {
+                Section(tr("Storage")) {
+                    Label(tr("Overview"), systemImage: "chart.pie.fill").tag(Page.overview)
+                }
+                Section(tr("Clean")) {
+                    ForEach(CategoryID.allCases) { id in
+                        SidebarRow(model: model, id: id).tag(Page.category(id))
+                    }
+                }
             }
             .navigationSplitViewColumnWidth(min: 290, ideal: 320, max: 380)
         } detail: {
-            DetailView(model: model, id: current)
+            ZStack(alignment: .bottom) {
+                AuroraBackground()
+                switch page {
+                case .overview: OverviewView(storage: storage, model: model)
+                case .category(let id): DetailView(model: model, id: id)
+                }
+                FooterBar(model: model)
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 16)
+            }
         }
-        .safeAreaInset(edge: .bottom, spacing: 0) { FooterBar(model: model) }
         .toolbar {
             ToolbarItem {
-                Button { model.scan() } label: { Label(tr("Scan again"), systemImage: "arrow.clockwise") }
-                    .disabled(model.isBusy)
+                Button {
+                    model.scan()
+                    storage.refresh()
+                } label: { Label(tr("Scan again"), systemImage: "arrow.clockwise") }
+                    .disabled(model.isBusy || storage.phase == .measuring)
                     .help(tr("Scan again"))
             }
         }
@@ -35,6 +64,7 @@ struct ContentView: View {
             Text(confirmationMessage)
         }
         .navigationTitle("Besom")
+        .onAppear { if storage.phase == .idle { storage.refresh() } }
     }
 
     private var confirmationMessage: String {
@@ -52,10 +82,12 @@ struct ContentView: View {
 
 private struct SelectionBox: View {
     let state: CleanerModel.Tri
+    var tint: Color = .accentColor
     var body: some View {
-        Image(systemName: state == .all ? "checkmark.square.fill" : (state == .some ? "minus.square.fill" : "square"))
-            .font(.system(size: 16))
-            .foregroundStyle(state == .none ? Color.secondary : Color.accentColor)
+        Image(systemName: state == .all ? "checkmark.circle.fill" : (state == .some ? "minus.circle.fill" : "circle"))
+            .font(.system(size: 17))
+            .symbolRenderingMode(.hierarchical)
+            .foregroundStyle(state == .none ? Color.secondary : tint)
     }
 }
 
@@ -67,13 +99,13 @@ private struct SidebarRow: View {
         let r = model.result(id)
         let empty = r.items.isEmpty
         HStack(spacing: 10) {
-            Button { model.toggle(id) } label: { SelectionBox(state: model.state(of: id)) }
+            Button { model.toggle(id) } label: { SelectionBox(state: model.state(of: id), tint: id.tint) }
                 .buttonStyle(.plain)
                 .disabled(empty)
                 .opacity(empty ? 0.35 : 1)
             Image(systemName: id.symbol)
                 .frame(width: 20)
-                .foregroundStyle(empty ? Color.secondary : Color.accentColor)
+                .foregroundStyle(empty ? Color.secondary : id.tint)
             VStack(alignment: .leading, spacing: 1) {
                 Text(id.title).fontWeight(.medium)
                 Text(r.needsAccess ? tr("Needs Full Disk Access") : id.subtitle)
@@ -94,7 +126,7 @@ private struct SidebarRow: View {
     }
 }
 
-// MARK: - Détail
+// MARK: - Détail d'une famille
 
 private struct DetailView: View {
     @ObservedObject var model: CleanerModel
@@ -102,26 +134,35 @@ private struct DetailView: View {
 
     var body: some View {
         let r = model.result(id)
-        VStack(spacing: 0) {
-            header(r)
-            Divider()
-            if r.items.isEmpty {
-                empty(r)
-            } else {
-                List {
-                    ForEach(r.items.prefix(300)) { ItemRow(model: model, item: $0) }
-                    if r.items.count > 300 {
-                        Text(tr("+ %d smaller items", r.items.count - 300)).foregroundStyle(.secondary)
+        ScrollView {
+            VStack(spacing: 16) {
+                header(r)
+                if r.items.isEmpty {
+                    empty(r).padding(.top, 20)
+                } else {
+                    if r.items.count > 1 { chart(r) }
+                    VStack(spacing: 4) {
+                        ForEach(r.items.prefix(300)) { ItemRow(model: model, item: $0, tint: id.tint) }
+                        if r.items.count > 300 {
+                            Text(tr("+ %d smaller items", r.items.count - 300)).foregroundStyle(.secondary).padding(8)
+                        }
                     }
                 }
-                .listStyle(.inset)
             }
+            .padding(.horizontal, 24)
+            .padding(.top, 8)
+            .padding(.bottom, 96)
         }
+        .scrollIndicators(.hidden)
     }
 
     private func header(_ r: CategoryResult) -> some View {
-        HStack(alignment: .top, spacing: 12) {
-            Image(systemName: id.symbol).font(.system(size: 26)).foregroundStyle(Color.accentColor).frame(width: 34)
+        HStack(alignment: .center, spacing: 14) {
+            Image(systemName: id.symbol)
+                .font(.system(size: 26))
+                .foregroundStyle(id.tint)
+                .frame(width: 52, height: 52)
+                .glassCard(radius: 16, tint: id.tint)
             VStack(alignment: .leading, spacing: 3) {
                 Text(id.title).font(.title2.weight(.semibold))
                 Text(id.disposal == .trash
@@ -131,14 +172,42 @@ private struct DetailView: View {
             }
             Spacer()
             VStack(alignment: .trailing, spacing: 4) {
-                Text(bytes(r.totalSize)).font(.title3.weight(.semibold).monospacedDigit())
+                Text(bytes(r.totalSize)).font(.title2.weight(.bold).monospacedDigit())
                 if !r.items.isEmpty {
                     Button(model.state(of: id) == .all ? tr("Deselect all") : tr("Select all")) { model.toggle(id) }
                         .buttonStyle(.link)
                 }
             }
         }
-        .padding(18)
+        .padding(16)
+        .glassCard()
+    }
+
+    /// Les éléments les plus lourds, d'un coup d'œil.
+    private func chart(_ r: CategoryResult) -> some View {
+        let top = Array(r.items.prefix(6))
+        return VStack(alignment: .leading, spacing: 8) {
+            Text(tr("Biggest items")).font(.headline)
+            Chart(top) { item in
+                BarMark(x: .value("Size", item.size), y: .value("Item", item.name))
+                    .cornerRadius(5)
+                    .foregroundStyle(LinearGradient(colors: [id.tint, id.tint.opacity(0.6)], startPoint: .leading, endPoint: .trailing))
+                    .opacity(model.selected.contains(item.id) ? 1 : 0.35)
+                    .annotation(position: .trailing, alignment: .leading) {
+                        Text(bytes(item.size)).font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                    }
+            }
+            .chartYScale(domain: top.map(\.name))
+            .chartXAxis(.hidden)
+            .chartYAxis {
+                AxisMarks { _ in AxisValueLabel(horizontalSpacing: 8).font(.caption) }
+            }
+            .chartXScale(range: .plotDimension(endPadding: 64))
+            .frame(height: CGFloat(top.count) * 28 + 6)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .glassCard()
     }
 
     @ViewBuilder private func empty(_ r: CategoryResult) -> some View {
@@ -148,12 +217,12 @@ private struct DetailView: View {
             } description: {
                 Text(tr("macOS keeps this folder private. Allow Besom in System Settings → Privacy & Security → Full Disk Access, then scan again."))
             } actions: {
-                Button(tr("Open settings")) { openFullDiskAccess() }
+                Button(tr("Open settings")) { openFullDiskAccess() }.glassButton()
             }
         } else if model.hasScanned {
             ContentUnavailableView(tr("Nothing to clean here"), systemImage: "checkmark.circle")
         } else {
-            ProgressView(tr("Scanning…")).frame(maxHeight: .infinity)
+            ProgressView(tr("Scanning…")).frame(maxWidth: .infinity, minHeight: 200)
         }
     }
 }
@@ -161,11 +230,13 @@ private struct DetailView: View {
 private struct ItemRow: View {
     @ObservedObject var model: CleanerModel
     let item: CleanItem
+    let tint: Color
+    @State private var hovering = false
 
     var body: some View {
         HStack(spacing: 10) {
             Button { model.toggle(item) } label: {
-                SelectionBox(state: model.selected.contains(item.id) ? .all : .none)
+                SelectionBox(state: model.selected.contains(item.id) ? .all : .none, tint: tint)
             }
             .buttonStyle(.plain)
             VStack(alignment: .leading, spacing: 1) {
@@ -179,14 +250,18 @@ private struct ItemRow: View {
                 Image(systemName: "magnifyingglass")
             }
             .buttonStyle(.borderless)
+            .opacity(hovering ? 1 : 0.35)
             .help(tr("Show in Finder"))
             Text(bytes(item.size)).font(.callout.monospacedDigit()).frame(minWidth: 70, alignment: .trailing)
         }
-        .padding(.vertical, 2)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(.primary.opacity(hovering ? 0.09 : 0.05)))
+        .onHover { hovering = $0 }
     }
 }
 
-// MARK: - Barre du bas
+// MARK: - Barre flottante
 
 private struct FooterBar: View {
     @ObservedObject var model: CleanerModel
@@ -196,16 +271,17 @@ private struct FooterBar: View {
             status
             Spacer()
             Button { model.confirming = true } label: {
-                Text(tr("Clean %@", bytes(model.selectedSize))).frame(minWidth: 130)
+                Text(tr("Clean %@", bytes(model.selectedSize))).fontWeight(.semibold).frame(minWidth: 120)
             }
-            .buttonStyle(.borderedProminent)
+            .prominentGlassButton()
             .controlSize(.large)
             .disabled(model.selectedSize == 0 || model.isBusy)
         }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 12)
-        .background(.bar)
-        .overlay(alignment: .top) { Divider() }
+        .padding(.leading, 20)
+        .padding(.trailing, 10)
+        .padding(.vertical, 10)
+        .glassCapsule()
+        .frame(maxWidth: 640)
     }
 
     @ViewBuilder private var status: some View {

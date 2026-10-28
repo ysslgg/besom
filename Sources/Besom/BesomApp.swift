@@ -8,12 +8,12 @@ struct BesomApp: App {
 
     var body: some Scene {
         Window("Besom", id: "main") {
-            ContentView(model: delegate.model)
-                .frame(minWidth: 780, minHeight: 520)
+            ContentView(model: delegate.model, storage: delegate.storage)
+                .frame(minWidth: 960, minHeight: 640)
                 // Changer de langue reconstruit l'interface avec les nouveaux textes.
                 .id(settings.language.rawValue)
         }
-        .defaultSize(width: 900, height: 620)
+        .defaultSize(width: 1120, height: 760)
         .commands {
             CommandGroup(after: .newItem) {
                 Button(tr("Scan again")) { delegate.model.scan() }
@@ -54,6 +54,7 @@ func openFullDiskAccess() {
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let model = CleanerModel()
+    let storage = StorageModel()
     private var timer: Timer?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -67,14 +68,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
             exit(0)
         }
+        if CommandLine.arguments.contains("--storage") {
+            let units = StorageScan.units()
+            let box = SizeBox(count: units.count)
+            let t0 = Date()
+            StorageScan.measure(units) { i, s in box.set(i, s) }
+            let sizes = box.values
+            let v = StorageScan.volume()
+            print("volume \(v.name): total \(bytes(v.total)), free \(bytes(v.free)), measured in \(Int(Date().timeIntervalSince(t0))) s")
+            var groups: [StorageGroup: Int64] = [:]
+            for (u, s) in zip(units, sizes) { groups[u.group, default: 0] += s }
+            for (g, s) in groups.sorted(by: { $0.value > $1.value }) { print("  \(g.rawValue)\t\(bytes(s))") }
+            for (u, s) in zip(units, sizes).sorted(by: { $0.1 > $1.1 }).prefix(8) { print("    \(bytes(s))\t\(u.label)") }
+            exit(0)
+        }
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
         model.scan()
         // Rafraîchit de temps en temps si l'app reste ouverte.
         let t = Timer(timeInterval: 3 * 3600, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated {
-                guard let model = self?.model, Prefs.shared.autoScan, !model.isBusy else { return }
-                model.scan()
+                guard let self, Prefs.shared.autoScan, !self.model.isBusy else { return }
+                self.model.scan()
+                self.storage.refresh()
             }
         }
         t.tolerance = 600
@@ -83,4 +99,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
+}
+
+/// Tableau de tailles partagé entre les threads de mesure.
+final class SizeBox: @unchecked Sendable {
+    private let lock = NSLock()
+    private var sizes: [Int64]
+    init(count: Int) { sizes = [Int64](repeating: 0, count: count) }
+    func set(_ i: Int, _ s: Int64) { lock.lock(); sizes[i] = s; lock.unlock() }
+    var values: [Int64] { lock.lock(); defer { lock.unlock() }; return sizes }
 }

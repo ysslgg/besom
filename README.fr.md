@@ -13,6 +13,7 @@ Fichiers temporaires, caches, journaux, données d'apps orphelines, vieux instal
 [![Télécharger Besom](https://img.shields.io/badge/%E2%AC%87%EF%B8%8E%20T%C3%A9l%C3%A9charger-Besom.dmg-14b8a6?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/ysslgg/besom/releases/latest/download/Besom.dmg)
 
 ![Dernière version](https://img.shields.io/github/v/release/ysslgg/besom?color=14b8a6&label=version)
+![Téléchargements](https://img.shields.io/github/downloads/ysslgg/besom/total?color=ec4899&label=téléchargements)
 
 ![macOS 14+](https://img.shields.io/badge/macOS-14%2B-444?logo=apple&logoColor=white)
 ![Apple Silicon et Intel](https://img.shields.io/badge/Apple%20Silicon%20%2B%20Intel-444)
@@ -45,6 +46,8 @@ Fichiers temporaires, caches, journaux, données d'apps orphelines, vieux instal
 - **Essai à blanc depuis le terminal** : `Besom --scan` affiche ce qui serait nettoyé puis quitte, sans rien supprimer.
 
 ### Et aussi
+- **Vue d'ensemble du stockage** : un anneau qui montre où part ton disque (apps, documents, téléchargements, données de développement, données d'apps, corbeille, système, libre), une barre de ce que Besom peut récupérer, et tes dossiers les plus lourds.
+- **Design Liquid Glass** sur macOS 26 et plus (un rendu en matériau flou sur macOS 14 et 15), avec un graphique des éléments les plus lourds de chaque famille.
 - **Native et légère** : SwiftUI, une barre latérale des familles avec leurs tailles, une liste détaillée par famille, analyse en direct.
 - **Analyse automatique** au lancement puis toutes les quelques heures tant que l'app reste ouverte.
 - **Français ou anglais** : suit la langue du système, modifiable dans les Réglages (⌘,).
