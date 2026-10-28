@@ -1,4 +1,4 @@
-// Génère l'icône de Besom. Usage : swift scripts/make-icon.swift <sortie.png> [a|b|c]
+// Génère l'icône de Besom. Usage : swift scripts/make-icon.swift <sortie.png> [a|b|c|d]
 import AppKit
 import CoreGraphics
 
@@ -69,6 +69,64 @@ case "b":
     }
     sparkle(c, 170, col(1, 1, 1), glow: col(0.6, 1, 0.95, 0.9))
     sparkle(CGPoint(x: 740, y: 740), 52, col(1, 1, 1, 0.9))
+
+case "d":
+    // Balai de verre, monochrome blanc sur fond riche
+    ctx.drawLinearGradient(grad([col(0.05, 0.10, 0.30), col(0.03, 0.30, 0.46), col(0.02, 0.58, 0.60)], [0, 0.55, 1]),
+                           start: CGPoint(x: 120, y: 960), end: CGPoint(x: 880, y: 90), options: [])
+    radial(CGPoint(x: 800, y: 840), 560, col(0.40, 0.95, 0.80, 0.55), col(0.40, 0.95, 0.80, 0))
+    radial(CGPoint(x: 160, y: 200), 520, col(0.55, 0.35, 1.0, 0.45), col(0.55, 0.35, 1.0, 0))
+    radial(CGPoint(x: 520, y: 520), 360, col(1, 1, 1, 0.20), col(1, 1, 1, 0))
+    ctx.saveGState()
+    ctx.translateBy(x: 540, y: 535)
+    ctx.rotate(by: -38 * .pi / 180)
+    ctx.scaleBy(x: 1.08, y: 1.08)
+    let head = CGMutablePath()
+    head.move(to: CGPoint(x: -56, y: -70))
+    head.addCurve(to: CGPoint(x: -180, y: -335), control1: CGPoint(x: -70, y: -170), control2: CGPoint(x: -176, y: -250))
+    head.addQuadCurve(to: CGPoint(x: 180, y: -335), control: CGPoint(x: 0, y: -400))
+    head.addCurve(to: CGPoint(x: 56, y: -70), control1: CGPoint(x: 176, y: -250), control2: CGPoint(x: 70, y: -170))
+    head.closeSubpath()
+    let handle = CGPath(roundedRect: CGRect(x: -21, y: -60, width: 42, height: 400), cornerWidth: 21, cornerHeight: 21, transform: nil)
+    let band = CGPath(roundedRect: CGRect(x: -98, y: -138, width: 196, height: 84), cornerWidth: 28, cornerHeight: 28, transform: nil)
+    // Halo et ombre
+    ctx.saveGState()
+    ctx.setShadow(offset: CGSize(width: 12, height: -24), blur: 44, color: col(0, 0.05, 0.15, 0.6))
+    ctx.beginTransparencyLayer(auxiliaryInfo: nil)
+    ctx.setFillColor(col(1, 1, 1))
+    for p in [handle, head, band] { ctx.addPath(p); ctx.fillPath() }
+    ctx.endTransparencyLayer()
+    ctx.restoreGState()
+    // Manche : verre blanc
+    ctx.saveGState(); ctx.addPath(handle); ctx.clip()
+    ctx.drawLinearGradient(grad([col(0.80, 0.93, 0.98), col(1, 1, 1), col(0.72, 0.88, 0.95)], [0, 0.4, 1]),
+                           start: CGPoint(x: -21, y: 0), end: CGPoint(x: 21, y: 0), options: [])
+    ctx.restoreGState()
+    // Poils : verre dépoli, brins fins
+    ctx.saveGState(); ctx.addPath(head); ctx.clip()
+    ctx.drawLinearGradient(grad([col(0.70, 0.90, 0.97), col(0.92, 0.98, 1), col(1, 1, 1)], [0, 0.5, 1]),
+                           start: CGPoint(x: 0, y: -70), end: CGPoint(x: 0, y: -400), options: [])
+    ctx.setLineCap(.round)
+    for i in -8...8 {
+        let t = CGFloat(i)
+        ctx.setStrokeColor(col(0.10, 0.45, 0.60, i % 2 == 0 ? 0.28 : 0.12)); ctx.setLineWidth(i % 2 == 0 ? 5 : 3)
+        ctx.move(to: CGPoint(x: t * 7, y: -70)); ctx.addLine(to: CGPoint(x: t * 24, y: -410)); ctx.strokePath()
+    }
+    ctx.drawLinearGradient(grad([col(1, 1, 1, 0.9), col(1, 1, 1, 0)], [0, 1]), start: CGPoint(x: -185, y: -250), end: CGPoint(x: -10, y: -250), options: [])
+    ctx.restoreGState()
+    // Bague : teal profond pour le contraste
+    ctx.saveGState(); ctx.addPath(band); ctx.clip()
+    ctx.drawLinearGradient(grad([col(0.10, 0.62, 0.70), col(0.03, 0.34, 0.50), col(0.02, 0.24, 0.40)], [0, 0.5, 1]),
+                           start: CGPoint(x: 0, y: -54), end: CGPoint(x: 0, y: -138), options: [])
+    ctx.drawLinearGradient(grad([col(1, 1, 1, 0.45), col(1, 1, 1, 0)], [0, 1]),
+                           start: CGPoint(x: 0, y: -54), end: CGPoint(x: 0, y: -90), options: [])
+    ctx.restoreGState()
+    ctx.addPath(band); ctx.setStrokeColor(col(1, 1, 1, 0.55)); ctx.setLineWidth(3); ctx.strokePath()
+    ctx.restoreGState()
+    sparkle(CGPoint(x: 270, y: 785), 105, col(1, 1, 1), glow: col(0.6, 1, 0.95, 0.95))
+    sparkle(CGPoint(x: 800, y: 285), 125, col(1, 1, 1), glow: col(0.6, 0.9, 1, 0.95))
+    sparkle(CGPoint(x: 855, y: 535), 44, col(1, 1, 1, 0.9))
+    sparkle(CGPoint(x: 395, y: 880), 30, col(1, 1, 1, 0.8))
 
 case "c":
     // Verre clair, un coup de balai
