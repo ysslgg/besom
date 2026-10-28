@@ -1,4 +1,4 @@
-// Génère l'icône de Besom. Usage : swift scripts/make-icon.swift <sortie.png> [a|b|c|d|e|f|g]
+// Génère l'icône de Besom. Usage : swift scripts/make-icon.swift <sortie.png> [a|b|c|d|e|f|g|h|i]
 import AppKit
 import CoreGraphics
 
@@ -258,6 +258,73 @@ case "c":
     sparkle(CGPoint(x: 620, y: 880 - 120), 60, col(0.25, 0.55, 0.95), glow: col(0.4, 0.7, 1, 0.7))
     sparkle(CGPoint(x: 790, y: 330), 52, col(0.12, 0.72, 0.68), glow: col(0.3, 0.9, 0.85, 0.7))
 
+case "h":
+    // Disques de stockage empilés, coche de validation
+    ctx.drawLinearGradient(grad([col(0.05, 0.08, 0.26), col(0.04, 0.22, 0.44), col(0.02, 0.52, 0.58)], [0, 0.55, 1]),
+                           start: CGPoint(x: 120, y: 960), end: CGPoint(x: 880, y: 90), options: [])
+    radial(CGPoint(x: 780, y: 860), 560, col(0.40, 0.95, 0.80, 0.5), col(0.40, 0.95, 0.80, 0))
+    radial(CGPoint(x: 200, y: 200), 500, col(0.55, 0.35, 1.0, 0.4), col(0.55, 0.35, 1.0, 0))
+    let layers: [(CGFloat, CGColor, CGColor, CGColor)] = [
+        (300, col(0.07, 0.30, 0.55), col(0.20, 0.52, 0.85), col(0.36, 0.66, 0.98)),
+        (445, col(0.05, 0.42, 0.55), col(0.15, 0.68, 0.78), col(0.35, 0.86, 0.90)),
+        (590, col(0.55, 0.72, 0.80), col(0.85, 0.96, 0.98), col(1, 1, 1)),
+    ]
+    let rx: CGFloat = 300, ry: CGFloat = 125, th: CGFloat = 52
+    for (cy, side, topA, topB) in layers {
+        ctx.saveGState()
+        ctx.setShadow(offset: CGSize(width: 0, height: -18), blur: 30, color: col(0, 0.05, 0.15, 0.45))
+        let slab = CGMutablePath()
+        slab.addEllipse(in: CGRect(x: 512 - rx, y: cy - th - ry, width: 2 * rx, height: 2 * ry))
+        slab.addRect(CGRect(x: 512 - rx, y: cy - th, width: 2 * rx, height: th))
+        ctx.addPath(slab); ctx.setFillColor(side); ctx.fillPath()
+        ctx.restoreGState()
+        ctx.saveGState(); ctx.addPath(slab); ctx.clip()
+        ctx.drawLinearGradient(grad([col(1, 1, 1, 0.25), col(0, 0, 0, 0.25)], [0, 1]),
+                               start: CGPoint(x: 512 - rx, y: 0), end: CGPoint(x: 512 + rx, y: 0), options: [])
+        ctx.restoreGState()
+        let top = CGPath(ellipseIn: CGRect(x: 512 - rx, y: cy - ry, width: 2 * rx, height: 2 * ry), transform: nil)
+        ctx.saveGState(); ctx.addPath(top); ctx.clip()
+        ctx.drawLinearGradient(grad([topB, topA], [0, 1]), start: CGPoint(x: 300, y: cy + ry), end: CGPoint(x: 700, y: cy - ry), options: [])
+        ctx.restoreGState()
+        ctx.addPath(top); ctx.setStrokeColor(col(1, 1, 1, 0.65)); ctx.setLineWidth(3); ctx.strokePath()
+    }
+    // Coche sur le disque du dessus
+    let check = CGMutablePath()
+    check.move(to: CGPoint(x: 405, y: 600)); check.addLine(to: CGPoint(x: 480, y: 548)); check.addLine(to: CGPoint(x: 632, y: 655))
+    ctx.saveGState()
+    ctx.setShadow(offset: CGSize(width: 0, height: -8), blur: 14, color: col(0, 0.2, 0.3, 0.35))
+    ctx.setLineWidth(58); ctx.setLineCap(.round); ctx.setLineJoin(.round)
+    ctx.addPath(check); ctx.replacePathWithStrokedPath(); ctx.clip()
+    ctx.drawLinearGradient(grad([col(0.05, 0.60, 0.66), col(0.10, 0.45, 0.80)], [0, 1]), start: CGPoint(x: 400, y: 540), end: CGPoint(x: 640, y: 670), options: [])
+    ctx.restoreGState()
+
+case "i":
+    // Monogramme « B » en verre, sans étoile
+    ctx.drawLinearGradient(grad([col(0.05, 0.10, 0.30), col(0.03, 0.30, 0.46), col(0.02, 0.58, 0.60)], [0, 0.55, 1]),
+                           start: CGPoint(x: 120, y: 960), end: CGPoint(x: 880, y: 90), options: [])
+    radial(CGPoint(x: 800, y: 840), 560, col(0.40, 0.95, 0.80, 0.55), col(0.40, 0.95, 0.80, 0))
+    radial(CGPoint(x: 160, y: 200), 520, col(0.55, 0.35, 1.0, 0.45), col(0.55, 0.35, 1.0, 0))
+    let base = NSFont.systemFont(ofSize: 800, weight: .black)
+    let desc = base.fontDescriptor.withDesign(.rounded) ?? base.fontDescriptor
+    let font = CTFontCreateWithFontDescriptor(desc, 800, nil)
+    var ch: UniChar = 66
+    var glyph = CGGlyph()
+    CTFontGetGlyphsForCharacters(font, &ch, &glyph, 1)
+    let raw = CTFontCreatePathForGlyph(font, glyph, nil)!
+    let bb = raw.boundingBox
+    var tf = CGAffineTransform(translationX: 512 - bb.midX, y: 500 - bb.midY)
+    let glyphPath = raw.copy(using: &tf)!
+    ctx.saveGState()
+    ctx.setShadow(offset: CGSize(width: 10, height: -22), blur: 40, color: col(0, 0.05, 0.15, 0.6))
+    ctx.addPath(glyphPath); ctx.setFillColor(col(1, 1, 1)); ctx.fillPath()
+    ctx.restoreGState()
+    ctx.saveGState(); ctx.addPath(glyphPath); ctx.clip()
+    ctx.drawLinearGradient(grad([col(1, 1, 1), col(0.84, 0.96, 0.98), col(0.62, 0.86, 0.94)], [0, 0.5, 1]),
+                           start: CGPoint(x: 300, y: 860), end: CGPoint(x: 700, y: 150), options: [])
+    ctx.drawLinearGradient(grad([col(1, 1, 1, 0.8), col(1, 1, 1, 0)], [0, 1]),
+                           start: CGPoint(x: 300, y: 800), end: CGPoint(x: 300, y: 560), options: [])
+    ctx.restoreGState()
+    ctx.addPath(glyphPath); ctx.setStrokeColor(col(1, 1, 1, 0.7)); ctx.setLineWidth(3); ctx.strokePath()
 default:
     // Balai en verre sur fond profond
     ctx.drawLinearGradient(grad([col(0.02, 0.12, 0.20), col(0.04, 0.30, 0.38), col(0.10, 0.55, 0.55)], [0, 0.55, 1]),

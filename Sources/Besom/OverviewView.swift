@@ -48,7 +48,7 @@ struct OverviewView: View {
         HStack(spacing: 14) {
             StatTile(title: tr("Used"), value: bytes(storage.used), symbol: "internaldrive.fill", tint: Color(hue: 0.60, saturation: 0.65, brightness: 0.95))
             StatTile(title: tr("Free"), value: bytes(storage.free), symbol: "checkmark.circle.fill", tint: Color(hue: 0.38, saturation: 0.6, brightness: 0.85))
-            StatTile(title: tr("Can be cleaned"), value: bytes(model.totalSize), symbol: "sparkles", tint: Color(hue: 0.47, saturation: 0.6, brightness: 0.85))
+            StatTile(title: tr("Can be cleaned"), value: bytes(model.totalSize), symbol: "checkmark.seal.fill", tint: Color(hue: 0.47, saturation: 0.6, brightness: 0.85))
         }
     }
 
@@ -124,7 +124,7 @@ struct OverviewView: View {
         let total = max(model.totalSize, 1)
         return VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .firstTextBaseline) {
-                Label(tr("Can be cleaned"), systemImage: "sparkles").font(.headline)
+                Label(tr("Can be cleaned"), systemImage: "checkmark.seal.fill").font(.headline)
                 Spacer()
                 Text(bytes(model.totalSize)).font(.title3.weight(.bold).monospacedDigit())
             }
