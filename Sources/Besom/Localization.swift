@@ -10,6 +10,13 @@ func tr(_ english: String, _ args: CVarArg...) -> String {
 
 enum Localization {
     static let fr: [String: String] = [
+        "Besom %@": "Besom %@",
+        "Download": "Télécharger",
+        "Check for updates": "Rechercher les mises à jour",
+        "Checks GitHub for a newer version once a day.": "Vérifie sur GitHub une fois par jour si une version plus récente existe.",
+        "You have the latest version.": "Vous avez la dernière version.",
+        "Version %@ is available.": "La version %@ est disponible.",
+        "Could not check for updates.": "Impossible de vérifier les mises à jour.",
         "Clear output": "Effacer",
         "%d update available": "%d mise à jour disponible",
         "Commands and their output show up here as they run.": "Les commandes et leur sortie s'affichent ici pendant leur exécution.",

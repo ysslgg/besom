@@ -26,7 +26,7 @@ enum AppLanguage: String, CaseIterable, Identifiable {
     /// Lue directement dans les préférences : utilisable depuis n'importe quel thread.
     static var current: AppLanguage {
         if let raw = UserDefaults.standard.string(forKey: "language"), let l = AppLanguage(rawValue: raw) { return l }
-        return Locale.preferredLanguages.first?.hasPrefix("fr") == true ? .fr : .en
+        return .en
     }
 }
 

@@ -74,6 +74,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         model.scan()
         // Vérification discrète des mises à jour, un peu après le lancement.
         DispatchQueue.main.asyncAfter(deadline: .now() + 4) { [weak self] in self?.brew.checkQuietly() }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 6) { AppUpdater.shared.checkIfDue() }
         // Rafraîchit de temps en temps si l'app reste ouverte.
         let t = Timer(timeInterval: 1800, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated {

@@ -43,6 +43,7 @@ Fichiers temporaires, caches, journaux, données d'apps orphelines, vieux instal
 - **Chaque élément est consultable** : décoche-le, ou affiche-le dans le Finder, avant de nettoyer.
 - **Un garde-fou revérifie chaque chemin juste avant la suppression.** Il doit se trouver strictement dans les dossiers autorisés de sa famille. Les liens symboliques sont résolus : un lien ne peut pas mener ailleurs.
 - **La détection des orphelins est prudente.** Tout ce qui a été modifié depuis moins de 30 jours, les données d'Apple, et ce qui correspond à une app installée, une app ouverte, un outil Homebrew ou un binaire système est laissé tranquille.
+- **Vérification des mises à jour.** Besom regarde sur GitHub une fois par jour s'il existe une version plus récente et te le signale dans Réglages (ou par un badge dans la barre latérale). Rien n'est installé sans toi.
 - **Essai à blanc depuis le terminal** : `Besom --scan` affiche ce qui serait nettoyé puis quitte, sans rien supprimer.
 
 ### Et aussi

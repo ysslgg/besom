@@ -43,6 +43,7 @@ Temp files, caches, logs, orphaned app data, old installers, the Trash: Besom fi
 - **Every item is inspectable**: untick it, or reveal it in Finder, before cleaning.
 - **A guard re-checks each path right before removal.** It must sit strictly inside the allowed folders of its family. Symbolic links are resolved, so a link can't lead outside.
 - **Orphan detection is conservative.** Anything modified in the last 30 days, Apple's own data, and anything matching an installed app, a running app, a Homebrew tool or a system binary is left alone.
+- **Update check.** Besom looks on GitHub once a day for a newer release and tells you in Settings (or with a badge in the sidebar). Nothing is installed without you.
 - **Dry run from the terminal**: `Besom --scan` prints what would be cleaned and exits, deleting nothing.
 
 ### And also

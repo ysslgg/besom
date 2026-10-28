@@ -7,6 +7,7 @@ extension Notification.Name {
 /// Onglet Réglages : apparence (dont la transparence du verre), règles de nettoyage, exclusions, général.
 struct SettingsPage: View {
     @ObservedObject private var prefs = Prefs.shared
+    @ObservedObject private var updater = AppUpdater.shared
 
     var body: some View {
         ScrollView {
@@ -191,13 +192,28 @@ struct SettingsPage: View {
         }
     }
 
+    private var updateSubtitle: String {
+        switch updater.state {
+        case .idle: return tr("Checks GitHub for a newer version once a day.")
+        case .checking: return tr("Checking…")
+        case .upToDate: return tr("You have the latest version.")
+        case .available(let v, _): return tr("Version %@ is available.", v)
+        case .failed: return tr("Could not check for updates.")
+        }
+    }
+
     private var about: some View {
         SettingsCard(title: tr("Access"), symbol: "lock.shield.fill") {
             SettingRow(title: tr("Full Disk Access"), subtitle: tr("Needed to read the Trash, device backups and protected app data.")) {
                 Button(tr("Open settings")) { openFullDiskAccess() }.glassButton()
             }
-            Text("Besom \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "")")
-                .font(.caption).foregroundStyle(.secondary)
+            SettingRow(title: tr("Besom %@", AppUpdater.current), subtitle: updateSubtitle) {
+                if updater.availableVersion != nil {
+                    Button(tr("Download")) { updater.openDownload() }.prominentGlassButton()
+                } else {
+                    Button(tr("Check for updates")) { updater.check() }.glassButton().disabled(updater.state == .checking)
+                }
+            }
         }
     }
 }

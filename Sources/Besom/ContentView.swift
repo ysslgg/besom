@@ -114,6 +114,7 @@ private struct Sidebar: View {
     @ObservedObject var storage: StorageModel
     @ObservedObject var brew: BrewModel
     @Binding var page: Page
+    @ObservedObject private var updater = AppUpdater.shared
     @Environment(\.colorScheme) private var scheme
 
     var body: some View {
@@ -174,6 +175,7 @@ private struct Sidebar: View {
                 iconBadge("gearshape.fill", .accentColor)
                 Text(tr("Settings")).fontWeight(.medium)
                 Spacer()
+                if updater.availableVersion != nil { Pill(text: tr("Update"), tint: .green) }
             }
             .padding(.horizontal, 10)
             .padding(.bottom, 10)
