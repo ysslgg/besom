@@ -11,6 +11,7 @@ struct OverviewView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 header
+                tiles
                 diskCard
                 reclaimableCard
                 foldersCard
@@ -18,8 +19,8 @@ struct OverviewView: View {
                     .font(.caption).foregroundStyle(.secondary).padding(.horizontal, 6)
             }
             .padding(.horizontal, 24)
-            .padding(.top, 8)
-            .padding(.bottom, 96)
+            .padding(.top, 28)
+            .padding(.bottom, 110)
         }
         .scrollIndicators(.hidden)
     }
@@ -38,6 +39,16 @@ struct OverviewView: View {
                     Text(tr("Measuring…")).font(.callout).foregroundStyle(.secondary)
                 }
             }
+        }
+    }
+
+    // MARK: Chiffres clés
+
+    private var tiles: some View {
+        HStack(spacing: 14) {
+            StatTile(title: tr("Used"), value: bytes(storage.used), symbol: "internaldrive.fill", tint: Color(hue: 0.60, saturation: 0.65, brightness: 0.95))
+            StatTile(title: tr("Free"), value: bytes(storage.free), symbol: "checkmark.circle.fill", tint: Color(hue: 0.38, saturation: 0.6, brightness: 0.85))
+            StatTile(title: tr("Can be cleaned"), value: bytes(model.totalSize), symbol: "sparkles", tint: Color(hue: 0.47, saturation: 0.6, brightness: 0.85))
         }
     }
 
@@ -219,5 +230,30 @@ struct FlowLayout: Layout {
             maxX = max(maxX, x - spacing)
         }
         return (CGSize(width: maxX, height: y + rowHeight), origins)
+    }
+}
+
+private struct StatTile: View {
+    let title: String
+    let value: String
+    let symbol: String
+    let tint: Color
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: symbol)
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(tint)
+                .frame(width: 40, height: 40)
+                .background(Circle().fill(tint.opacity(0.18)))
+            VStack(alignment: .leading, spacing: 1) {
+                Text(title).font(.caption).foregroundStyle(.secondary)
+                Text(value).font(.title3.weight(.bold).monospacedDigit()).lineLimit(1).minimumScaleFactor(0.7)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity)
+        .glassCard(radius: 22, tint: tint)
     }
 }

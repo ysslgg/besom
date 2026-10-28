@@ -10,51 +10,50 @@ func bytes(_ n: Int64) -> String {
 
 enum Page: Hashable {
     case overview
+    case settings
     case category(CategoryID)
 }
 
 struct ContentView: View {
     @ObservedObject var model: CleanerModel
     @ObservedObject var storage: StorageModel
+    @ObservedObject private var prefs = Prefs.shared
     @State private var page: Page = {
         // BESOM_PAGE=trash (par exemple) ouvre directement une famille : pratique pour tester l'interface.
+        if ProcessInfo.processInfo.environment["BESOM_PAGE"] == "settings" { return .settings }
         if let raw = ProcessInfo.processInfo.environment["BESOM_PAGE"], let id = CategoryID(rawValue: raw) { return .category(id) }
         return .overview
     }()
 
     var body: some View {
-        NavigationSplitView {
-            List(selection: $page) {
-                Section(tr("Storage")) {
-                    Label(tr("Overview"), systemImage: "chart.pie.fill").tag(Page.overview)
-                }
-                Section(tr("Clean")) {
-                    ForEach(CategoryID.allCases) { id in
-                        SidebarRow(model: model, id: id).tag(Page.category(id))
+        ZStack {
+            AuroraBackground()
+            HStack(spacing: 0) {
+                Sidebar(model: model, storage: storage, page: $page)
+                ZStack(alignment: .bottom) {
+                    Group {
+                        switch page {
+                        case .overview: OverviewView(storage: storage, model: model)
+                        case .settings: SettingsPage()
+                        case .category(let id): DetailView(model: model, id: id)
+                        }
+                    }
+                    // Le contenu s'efface en douceur sous la barre flottante.
+                    .mask {
+                        VStack(spacing: 0) {
+                            Rectangle()
+                            if page != .settings {
+                                LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom).frame(height: 96)
+                            }
+                        }
+                    }
+                    if page != .settings {
+                        FooterBar(model: model)
+                            .padding(.horizontal, 22)
+                            .padding(.bottom, 16)
                     }
                 }
-            }
-            .navigationSplitViewColumnWidth(min: 290, ideal: 320, max: 380)
-        } detail: {
-            ZStack(alignment: .bottom) {
-                AuroraBackground()
-                switch page {
-                case .overview: OverviewView(storage: storage, model: model)
-                case .category(let id): DetailView(model: model, id: id)
-                }
-                FooterBar(model: model)
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 16)
-            }
-        }
-        .toolbar {
-            ToolbarItem {
-                Button {
-                    model.scan()
-                    storage.refresh()
-                } label: { Label(tr("Scan again"), systemImage: "arrow.clockwise") }
-                    .disabled(model.isBusy || storage.phase == .measuring)
-                    .help(tr("Scan again"))
+                .frame(maxWidth: .infinity)
             }
         }
         .confirmationDialog(tr("Remove %@?", bytes(model.selectedSize)), isPresented: $model.confirming, titleVisibility: .visible) {
@@ -63,8 +62,16 @@ struct ContentView: View {
         } message: {
             Text(confirmationMessage)
         }
-        .navigationTitle("Besom")
+        .tint(prefs.theme.accent)
         .onAppear { if storage.phase == .idle { storage.refresh() } }
+        .onReceive(NotificationCenter.default.publisher(for: .openSettingsPage)) { _ in page = .settings }
+        // Quand on quitte les Réglages après avoir changé une règle, on relance l'analyse.
+        .onChange(of: page) { old, _ in
+            if old == .settings, prefs.rulesDirty {
+                prefs.rulesDirty = false
+                model.scan()
+            }
+        }
     }
 
     private var confirmationMessage: String {
@@ -78,7 +85,7 @@ struct ContentView: View {
     }
 }
 
-// MARK: - Barre latérale
+// MARK: - Barre latérale en verre
 
 private struct SelectionBox: View {
     let state: CleanerModel.Tri
@@ -91,38 +98,140 @@ private struct SelectionBox: View {
     }
 }
 
-private struct SidebarRow: View {
+private struct Sidebar: View {
+    @ObservedObject var model: CleanerModel
+    @ObservedObject var storage: StorageModel
+    @Binding var page: Page
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 10) {
+                Image(nsImage: NSApp.applicationIconImage).resizable().frame(width: 34, height: 34)
+                Text("Besom").font(.title3.weight(.bold))
+                Spacer()
+                Button {
+                    model.scan()
+                    storage.refresh()
+                } label: {
+                    Image(systemName: "arrow.clockwise").font(.system(size: 13, weight: .semibold)).frame(width: 30, height: 30)
+                        .contentShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .focusEffectDisabled()
+                .glassCapsule()
+                .disabled(model.isBusy || storage.phase == .measuring)
+                .opacity(model.isBusy || storage.phase == .measuring ? 0.4 : 1)
+                .help(tr("Scan again"))
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 50)
+            .padding(.bottom, 10)
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 4) {
+                    sectionTitle(tr("Storage"))
+                    NavRow(selected: page == .overview, tint: .accentColor) { page = .overview } content: {
+                        iconBadge("chart.pie.fill", .accentColor)
+                        Text(tr("Overview")).fontWeight(.medium)
+                        Spacer()
+                    }
+                    sectionTitle(tr("Clean")).padding(.top, 10)
+                    ForEach(CategoryID.allCases) { id in
+                        CategoryNavRow(model: model, id: id, selected: page == .category(id)) { page = .category(id) }
+                    }
+                }
+                .padding(.horizontal, 10)
+                .padding(.bottom, 12)
+            }
+            .scrollIndicators(.hidden)
+
+            NavRow(selected: page == .settings, tint: .accentColor) { page = .settings } content: {
+                iconBadge("gearshape.fill", .accentColor)
+                Text(tr("Settings")).fontWeight(.medium)
+                Spacer()
+            }
+            .padding(.horizontal, 10)
+            .padding(.bottom, 10)
+        }
+        .frame(width: 318)
+        .frame(maxHeight: .infinity)
+        .glassCard(radius: 30)
+        .padding(.leading, 10).padding(.vertical, 10).padding(.trailing, 4)
+    }
+
+    private func sectionTitle(_ t: String) -> some View {
+        Text(t.uppercased()).font(.caption2.weight(.semibold)).foregroundStyle(.secondary).padding(.horizontal, 10).padding(.top, 2)
+    }
+}
+
+private func iconBadge(_ symbol: String, _ tint: Color, dimmed: Bool = false) -> some View {
+    Image(systemName: symbol)
+        .font(.system(size: 13, weight: .semibold))
+        .foregroundStyle(dimmed ? Color.secondary : tint)
+        .frame(width: 30, height: 30)
+        .background(RoundedRectangle(cornerRadius: 9, style: .continuous).fill((dimmed ? Color.secondary : tint).opacity(0.16)))
+}
+
+private struct NavRow<Content: View>: View {
+    let selected: Bool
+    let tint: Color
+    let action: () -> Void
+    @ViewBuilder let content: () -> Content
+    @State private var hovering = false
+
+    var body: some View {
+        HStack(spacing: 10) { content() }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .frame(minHeight: 46)
+            .background(
+                RoundedRectangle(cornerRadius: 15, style: .continuous)
+                    .fill(selected ? tint.opacity(0.22) : Color.primary.opacity(hovering ? 0.07 : 0))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 15, style: .continuous)
+                    .strokeBorder(selected ? tint.opacity(0.45) : .clear, lineWidth: 1)
+            )
+            .contentShape(Rectangle())
+            .onTapGesture(perform: action)
+            .onHover { hovering = $0 }
+            .animation(.easeOut(duration: 0.15), value: selected)
+    }
+}
+
+private struct CategoryNavRow: View {
     @ObservedObject var model: CleanerModel
     let id: CategoryID
+    let selected: Bool
+    let action: () -> Void
 
     var body: some View {
         let r = model.result(id)
         let empty = r.items.isEmpty
-        HStack(spacing: 10) {
-            Button { model.toggle(id) } label: { SelectionBox(state: model.state(of: id), tint: id.tint) }
-                .buttonStyle(.plain)
-                .disabled(empty)
-                .opacity(empty ? 0.35 : 1)
-            Image(systemName: id.symbol)
-                .frame(width: 20)
-                .foregroundStyle(empty ? Color.secondary : id.tint)
+        let disabled = !Prefs.shared.isEnabled(id)
+        NavRow(selected: selected, tint: id.tint, action: action) {
+            iconBadge(id.symbol, id.tint, dimmed: empty)
             VStack(alignment: .leading, spacing: 1) {
-                Text(id.title).fontWeight(.medium)
-                Text(r.needsAccess ? tr("Needs Full Disk Access") : id.subtitle)
+                Text(id.title).fontWeight(.medium).lineLimit(1)
+                Text(disabled ? tr("Turned off in Settings") : (r.needsAccess ? tr("Needs Full Disk Access") : id.subtitle))
                     .font(.caption)
-                    .foregroundStyle(r.needsAccess ? Color.orange : Color.secondary)
+                    .foregroundStyle(r.needsAccess && !disabled ? Color.orange : Color.secondary)
                     .lineLimit(1)
             }
-            Spacer(minLength: 6)
+            Spacer(minLength: 4)
             if model.hasScanned {
                 Text(empty ? "—" : bytes(r.totalSize))
                     .font(.callout.monospacedDigit())
                     .foregroundStyle(empty ? Color.secondary.opacity(0.5) : Color.primary)
+                    .lineLimit(1).fixedSize()
             } else {
                 ProgressView().controlSize(.small)
             }
+            Button { model.toggle(id) } label: { SelectionBox(state: model.state(of: id), tint: id.tint) }
+                .buttonStyle(.plain)
+                .disabled(empty)
+                .opacity(empty ? 0.25 : 1)
         }
-        .padding(.vertical, 3)
     }
 }
 
@@ -150,8 +259,8 @@ private struct DetailView: View {
                 }
             }
             .padding(.horizontal, 24)
-            .padding(.top, 8)
-            .padding(.bottom, 96)
+            .padding(.top, 28)
+            .padding(.bottom, 110)
         }
         .scrollIndicators(.hidden)
     }
@@ -270,7 +379,7 @@ private struct FooterBar: View {
         HStack(spacing: 14) {
             status
             Spacer()
-            Button { model.confirming = true } label: {
+            Button { if Prefs.shared.confirmBeforeClean { model.confirming = true } else { model.clean() } } label: {
                 Text(tr("Clean %@", bytes(model.selectedSize))).fontWeight(.semibold).frame(minWidth: 120)
             }
             .prominentGlassButton()

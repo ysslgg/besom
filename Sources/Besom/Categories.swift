@@ -28,10 +28,10 @@ enum CategoryID: String, CaseIterable, Identifiable {
         switch self {
         case .caches: tr("Rebuilt automatically by your apps")
         case .logs: tr("Diagnostic reports and log files")
-        case .temp: tr("Untouched for over 3 days")
+        case .temp: tr("Untouched for over %d days", ScanRules.current.tempDays)
         case .devCaches: tr("Xcode build data, npm cache…")
         case .orphans: tr("Left behind by apps you uninstalled")
-        case .installers: tr("DMG, PKG, ISO in Downloads, 14+ days old")
+        case .installers: tr("DMG, PKG, ISO in Downloads, %d+ days old", ScanRules.current.installerDays)
         case .backups: tr("iPhone and iPad backups")
         case .trash: tr("Emptied for good")
         }

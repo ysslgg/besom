@@ -16,7 +16,9 @@ enum Scanner {
 
     static func scan(_ id: CategoryID, apps: InstalledApps) -> CategoryResult {
         var result = CategoryResult(id: id)
-        let candidates: [Candidate]
+        let rules = ScanRules.current
+        if rules.disabled.contains(id.rawValue) { return result }
+        var candidates: [Candidate]
         switch id {
         case .caches: candidates = caches()
         case .logs: candidates = logs()
@@ -27,12 +29,13 @@ enum Scanner {
         case .backups: candidates = backups()
         case .trash: candidates = children(of: home.appendingPathComponent(".Trash")).map { Candidate(url: $0) }
         }
+        candidates = candidates.filter { !rules.isExcluded($0.url) }
         if candidates.isEmpty, id == .trash || id == .backups {
             result.needsAccess = isDenied(id.allowedRoots[0])
         }
         let sizes = measure(candidates.map(\.url))
         result.items = zip(candidates, sizes).compactMap { c, size in
-            guard size > 0 else { return nil }
+            guard size > 0, size >= Int64(rules.minSizeMB) * 1_000_000 else { return nil }
             return CleanItem(url: c.url, category: id, size: size, modified: c.modified, detail: c.detail)
         }
         .sorted { $0.size > $1.size }
@@ -70,7 +73,7 @@ enum Scanner {
     /// Dossier temporaire de l'utilisateur : seulement ce qui n'a pas bougé depuis 3 jours.
     private static func temp() -> [Candidate] {
         let root = URL(fileURLWithPath: NSTemporaryDirectory())
-        let limit = Date().addingTimeInterval(-3 * 86_400)
+        let limit = Date().addingTimeInterval(-Double(ScanRules.current.tempDays) * 86_400)
         return children(of: root).compactMap { url in
             let name = url.lastPathComponent
             if name.hasPrefix(".") || name.hasPrefix("com.apple.") || name == "TemporaryItems" { return nil }
@@ -96,7 +99,7 @@ enum Scanner {
 
     /// Données d'apps désinstallées, et lanceurs qui pointent vers un programme disparu.
     private static func orphans(apps: InstalledApps) -> [Candidate] {
-        let recent = Date().addingTimeInterval(-30 * 86_400)
+        let recent = Date().addingTimeInterval(-Double(ScanRules.current.orphanDays) * 86_400)
         let protectedNames: Set<String> = [
             "addressbook", "caches", "clouddocs", "cloudstorage", "crashreporter", "dock", "fileprovider",
             "icloud", "knowledge", "mobilesync", "safari", "syncservices", "differentialprivacy", "default",
@@ -136,7 +139,7 @@ enum Scanner {
             let ext = url.pathExtension.lowercased()
             guard let date = modified(url) else { return nil }
             let age = now.timeIntervalSince(date)
-            if installerExt.contains(ext), age > 14 * 86_400 { return Candidate(url: url, modified: date, detail: lastUse(date)) }
+            if installerExt.contains(ext), age > Double(ScanRules.current.installerDays) * 86_400 { return Candidate(url: url, modified: date, detail: lastUse(date)) }
             if partialExt.contains(ext), age > 3 * 86_400 {
                 return Candidate(url: url, modified: date, detail: tr("Unfinished download"))
             }

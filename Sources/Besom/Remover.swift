@@ -18,6 +18,7 @@ enum Remover {
         let parent = item.url.deletingLastPathComponent().resolvingSymlinksInPath().path
         let name = item.url.lastPathComponent
         guard !name.isEmpty, name != ".", name != "..", !name.contains("/") else { return false }
+        guard !ScanRules.current.isExcluded(item.url) else { return false }
         return item.category.allowedRoots.contains { root in
             let r = root.resolvingSymlinksInPath().path
             return r.count > 1 && (parent == r || parent.hasPrefix(r + "/"))

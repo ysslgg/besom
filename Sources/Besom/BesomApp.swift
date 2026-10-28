@@ -13,35 +13,18 @@ struct BesomApp: App {
                 // Changer de langue reconstruit l'interface avec les nouveaux textes.
                 .id(settings.language.rawValue)
         }
+        .windowStyle(.hiddenTitleBar)
         .defaultSize(width: 1120, height: 760)
         .commands {
+            CommandGroup(replacing: .appSettings) {
+                Button(tr("Settings…")) { NotificationCenter.default.post(name: .openSettingsPage, object: nil) }
+                    .keyboardShortcut(",")
+            }
             CommandGroup(after: .newItem) {
                 Button(tr("Scan again")) { delegate.model.scan() }
                     .keyboardShortcut("r")
             }
         }
-
-        Settings {
-            SettingsView().id(settings.language.rawValue)
-        }
-    }
-}
-
-private struct SettingsView: View {
-    @ObservedObject private var settings = Prefs.shared
-
-    var body: some View {
-        Form {
-            Toggle(tr("Scan automatically"), isOn: $settings.autoScan)
-            Toggle(tr("Haptic feedback"), isOn: $settings.haptics)
-            Toggle(tr("Launch at login"), isOn: $settings.launchAtLogin)
-            Picker(tr("Language"), selection: $settings.language) {
-                ForEach(AppLanguage.allCases) { Text($0.label).tag($0) }
-            }
-            Button(tr("Open Full Disk Access settings…")) { openFullDiskAccess() }
-        }
-        .formStyle(.grouped)
-        .frame(width: 420, height: 250)
     }
 }
 
@@ -82,18 +65,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             for (u, s) in zip(units, sizes).sorted(by: { $0.1 > $1.1 }).prefix(8) { print("    \(bytes(s))\t\(u.label)") }
             exit(0)
         }
+        Prefs.shared.applyAppearance()
         NSApp.setActivationPolicy(.regular)
+        // La fenêtre se déplace en la saisissant par son fond (plus de barre de titre).
+        DispatchQueue.main.async { NSApp.windows.forEach { $0.isMovableByWindowBackground = true } }
         NSApp.activate(ignoringOtherApps: true)
         model.scan()
         // Rafraîchit de temps en temps si l'app reste ouverte.
-        let t = Timer(timeInterval: 3 * 3600, repeats: true) { [weak self] _ in
+        let t = Timer(timeInterval: 1800, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated {
                 guard let self, Prefs.shared.autoScan, !self.model.isBusy else { return }
+                let age = self.model.lastScan.map { Date().timeIntervalSince($0) } ?? .infinity
+                guard age >= Double(Prefs.shared.scanHours) * 3600 - 60 else { return }
                 self.model.scan()
                 self.storage.refresh()
             }
         }
-        t.tolerance = 600
+        t.tolerance = 120
         RunLoop.main.add(t, forMode: .common)
         timer = t
     }

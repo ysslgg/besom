@@ -15,31 +15,43 @@ extension CategoryID {
     }
 }
 
-extension View {
-    /// Carte en verre : Liquid Glass sur macOS 26 et plus, matériau flou en dessous.
-    @ViewBuilder func glassCard(radius: CGFloat = 22, tint: Color? = nil) -> some View {
+/// Applique le verre (Liquid Glass sur macOS 26+, matériau flou avant) selon les réglages de transparence.
+private struct GlassModifier: ViewModifier {
+    let shape: AnyShape
+    let tint: Color?
+    @ObservedObject private var prefs = Prefs.shared
+    @Environment(\.colorScheme) private var scheme
+
+    @available(macOS 26.0, *)
+    private func makeGlass() -> Glass {
+        var glass: Glass = prefs.glassStyle == .clear ? .clear : .regular
+        if let tint { glass = glass.tint(tint.opacity(0.4 * prefs.glassTint)) }
+        return glass
+    }
+
+    func body(content: Content) -> some View {
+        // Le « dépoli » ajoute une couche translucide sous le verre : plus il monte, moins le fond se voit.
+        let frost = (scheme == .dark ? Color.black : Color.white).opacity(prefs.glassFrost * 0.75)
         if #available(macOS 26.0, *) {
-            if let tint {
-                self.glassEffect(.regular.tint(tint.opacity(0.18)), in: .rect(cornerRadius: radius))
-            } else {
-                self.glassEffect(.regular, in: .rect(cornerRadius: radius))
-            }
+            content.background(frost, in: shape).glassEffect(makeGlass(), in: shape)
         } else {
-            self
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: radius, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: radius, style: .continuous).strokeBorder(.white.opacity(0.18), lineWidth: 0.8))
+            content
+                .background(prefs.glassStyle == .clear ? .ultraThinMaterial : .thinMaterial, in: shape)
+                .background(frost, in: shape)
+                .overlay(shape.stroke(.white.opacity(0.18), lineWidth: 0.8))
                 .shadow(color: .black.opacity(0.08), radius: 10, y: 4)
         }
     }
+}
 
-    @ViewBuilder func glassCapsule() -> some View {
-        if #available(macOS 26.0, *) {
-            self.glassEffect(.regular, in: .capsule)
-        } else {
-            self
-                .background(.ultraThinMaterial, in: Capsule())
-                .overlay(Capsule().strokeBorder(.white.opacity(0.18), lineWidth: 0.8))
-        }
+extension View {
+    /// Carte en verre.
+    func glassCard(radius: CGFloat = 22, tint: Color? = nil) -> some View {
+        modifier(GlassModifier(shape: AnyShape(RoundedRectangle(cornerRadius: radius, style: .continuous)), tint: tint))
+    }
+
+    func glassCapsule() -> some View {
+        modifier(GlassModifier(shape: AnyShape(Capsule()), tint: nil))
     }
 
     @ViewBuilder func prominentGlassButton() -> some View {
@@ -62,21 +74,24 @@ extension View {
 /// Fond coloré et doux, qui donne au verre quelque chose à réfracter.
 struct AuroraBackground: View {
     @Environment(\.colorScheme) private var scheme
+    @ObservedObject private var prefs = Prefs.shared
 
     var body: some View {
         let dark = scheme == .dark
+        let h = prefs.theme.hues
+        let sat = prefs.theme.saturation
         ZStack {
-            (dark ? Color(red: 0.05, green: 0.08, blue: 0.10) : Color(red: 0.92, green: 0.97, blue: 0.97))
+            (dark ? Color(red: 0.05, green: 0.07, blue: 0.09) : Color(red: 0.94, green: 0.96, blue: 0.97))
             GeometryReader { g in
-                Circle().fill(Color(hue: 0.47, saturation: 0.75, brightness: dark ? 0.75 : 0.95))
+                Circle().fill(Color(hue: h[0], saturation: sat * 1.05, brightness: dark ? 0.75 : 0.95))
                     .frame(width: g.size.width * 0.7).offset(x: -g.size.width * 0.15, y: -g.size.height * 0.25)
-                Circle().fill(Color(hue: 0.60, saturation: 0.65, brightness: dark ? 0.70 : 1.0))
+                Circle().fill(Color(hue: h[1], saturation: sat * 0.95, brightness: dark ? 0.70 : 1.0))
                     .frame(width: g.size.width * 0.55).offset(x: g.size.width * 0.55, y: g.size.height * 0.05)
-                Circle().fill(Color(hue: 0.38, saturation: 0.55, brightness: dark ? 0.60 : 0.95))
+                Circle().fill(Color(hue: h[2], saturation: sat * 0.80, brightness: dark ? 0.60 : 0.95))
                     .frame(width: g.size.width * 0.6).offset(x: g.size.width * 0.1, y: g.size.height * 0.62)
             }
             .blur(radius: 90)
-            .opacity(dark ? 0.55 : 0.60)
+            .opacity(prefs.auroraIntensity)
         }
         .ignoresSafeArea()
     }
