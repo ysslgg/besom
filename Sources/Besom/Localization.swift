@@ -1,0 +1,73 @@
+import Foundation
+
+/// Traduit un texte écrit en anglais vers la langue choisie ; `args` remplit les %@, %d…
+func tr(_ english: String, _ args: CVarArg...) -> String {
+    let lang = AppLanguage.current
+    let format = lang == .fr ? (Localization.fr[english] ?? english) : english
+    guard !args.isEmpty else { return format }
+    return String(format: format, locale: Locale(identifier: lang.rawValue), arguments: args)
+}
+
+enum Localization {
+    static let fr: [String: String] = [
+        "%@ selected · %@ found": "%@ sélectionnés · %@ trouvés",
+        "%@ will be deleted for good.": "%@ seront supprimés définitivement.",
+        "%@ will be moved to the Trash.": "%@ seront mis à la corbeille.",
+        "Cancel": "Annuler",
+        "Clean": "Nettoyer",
+        "Needs Full Disk Access": "Accès complet au disque requis",
+        "Nothing to clean here": "Rien à nettoyer ici",
+        "Open settings": "Ouvrir les réglages",
+        "Remove %@?": "Supprimer %@ ?",
+        "macOS keeps this folder private. Allow Besom in System Settings → Privacy & Security → Full Disk Access, then scan again.": "macOS garde ce dossier privé. Autorise Besom dans Réglages Système → Confidentialité et sécurité → Accès complet au disque, puis relance l'analyse.",
+        "%@ freed · %@ moved to the Trash": "%@ libérés · %@ mis à la corbeille",
+        "%@ freed ✓": "%@ libérés ✓",
+        "%@ moved to the Trash": "%@ mis à la corbeille",
+        "%@ of this goes to the Trash first.": "%@ passent d'abord par la corbeille.",
+        "%d items couldn't be removed (in use or protected).": "%d éléments n'ont pas pu être supprimés (utilisés ou protégés).",
+        "+ %d smaller items": "+ %d éléments plus petits",
+        "App caches": "Caches des apps",
+        "Back": "Retour",
+        "Clean %@": "Nettoyer %@",
+        "Cleaning… %d / %d": "Nettoyage… %d / %d",
+        "Confirm · remove %@": "Confirmer · supprimer %@",
+        "DMG, PKG, ISO in Downloads, 14+ days old": "DMG, PKG, ISO dans Téléchargements, 14 jours et plus",
+        "Deselect all": "Tout décocher",
+        "Developer leftovers": "Restes de développement",
+        "Diagnostic reports and log files": "Rapports de diagnostic et journaux",
+        "Emptied for good": "Vidée définitivement",
+        "Haptic feedback": "Retour haptique",
+        "Hide in full-screen apps": "Se masquer dans les apps en plein écran",
+        "Language": "Langue",
+        "Last modified %@": "Modifié %@",
+        "Launch at login": "Lancer au démarrage",
+        "Left behind by apps you uninstalled": "Laissées par des apps désinstallées",
+        "Logs & crash reports": "Journaux et rapports de plantage",
+        "Looking for things to clean…": "Recherche de fichiers à nettoyer…",
+        "Moved to the Trash, so you can still get them back.": "Mis à la corbeille : tu peux encore les récupérer.",
+        "Needs Full Disk Access · Open settings": "Accès complet au disque requis · Ouvrir les réglages",
+        "Nothing was removed": "Rien n'a été supprimé",
+        "Old device backups": "Anciennes sauvegardes d'appareils",
+        "Old installers & partial downloads": "Anciens installeurs et téléchargements inachevés",
+        "Open Full Disk Access settings…": "Ouvrir les réglages d'accès complet au disque…",
+        "Orphaned app data": "Données d'apps orphelines",
+        "Points to a missing program": "Pointe vers un programme disparu",
+        "Quit Besom": "Quitter Besom",
+        "Rebuilt automatically by your apps": "Recréés automatiquement par tes apps",
+        "Removed for good. These files are recreated when needed.": "Supprimés pour de bon. Ces fichiers sont recréés au besoin.",
+        "Scan again": "Analyser à nouveau",
+        "Scan automatically": "Analyser automatiquement",
+        "Scan now": "Analyser maintenant",
+        "Scanning…": "Analyse en cours…",
+        "Select all": "Tout cocher",
+        "Show in Finder": "Afficher dans le Finder",
+        "Show size next to the notch": "Afficher la taille à côté de l'encoche",
+        "Temporary files": "Fichiers temporaires",
+        "Trash": "Corbeille",
+        "Unfinished download": "Téléchargement inachevé",
+        "Untouched for over 3 days": "Inchangés depuis plus de 3 jours",
+        "Xcode build data, npm cache…": "Données de build Xcode, cache npm…",
+        "iPhone and iPad backups": "Sauvegardes d'iPhone et d'iPad",
+        "selected · %@ found": "sélectionnés · %@ trouvés",
+    ]
+}
