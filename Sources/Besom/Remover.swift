@@ -63,24 +63,39 @@ enum Remover {
         return false
     }
 
+    /// Exécute osascript et renvoie le message d'erreur éventuel (nil si tout s'est bien passé).
+    private static func runAppleScript(_ source: String) -> String? {
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
+        p.arguments = ["-e", source]
+        let err = Pipe()
+        p.standardOutput = FileHandle.nullDevice
+        p.standardError = err
+        do { try p.run() } catch { return error.localizedDescription }
+        let data = err.fileHandleForReading.readDataToEndOfFile()
+        p.waitUntilExit()
+        guard p.terminationStatus != 0 else { return nil }
+        let text = (String(data: data, encoding: .utf8) ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        return text.isEmpty ? "osascript exit \(p.terminationStatus)" : text
+    }
+
+    /// Vide la Corbeille avec le Finder : c'est lui qui demande le mot de passe pour les dossiers appartenant à root,
+    /// comme un « Vider la corbeille » fait à la main.
+    static func emptyTrashViaFinder() -> String? {
+        runAppleScript("with timeout of 7200 seconds\ntell application \"Finder\" to empty trash\nend timeout")
+    }
+
     /// Suppression avec les droits administrateur (macOS demande le mot de passe lui-même).
     /// Seuls les éléments qui passent le garde-fou sont transmis, chacun avec son chemin exact.
-    static func removeAsAdmin(_ items: [CleanItem]) -> Bool {
+    static func removeAsAdmin(_ items: [CleanItem]) -> String? {
         let safe = items.filter(isAllowed)
-        guard !safe.isEmpty else { return false }
-        var allOK = true
+        guard !safe.isEmpty else { return nil }
         for chunk in stride(from: 0, to: safe.count, by: 40).map({ Array(safe[$0..<min($0 + 40, safe.count)]) }) {
             let args = chunk.map { "'" + $0.url.path.replacingOccurrences(of: "'", with: "'\\''") + "'" }.joined(separator: " ")
             let shell = "/bin/rm -rf -- " + args
             let escaped = shell.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
-            let p = Process()
-            p.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
-            p.arguments = ["-e", "do shell script \"\(escaped)\" with administrator privileges"]
-            p.standardOutput = FileHandle.nullDevice
-            p.standardError = FileHandle.nullDevice
-            do { try p.run(); p.waitUntilExit() } catch { return false }
-            if p.terminationStatus != 0 { allOK = false; break }
+            if let error = runAppleScript("do shell script \"\(escaped)\" with administrator privileges") { return error }
         }
-        return allOK
+        return nil
     }
 }

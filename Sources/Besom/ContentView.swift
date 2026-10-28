@@ -416,6 +416,9 @@ private struct FooterBar: View {
                 if failed > 0 {
                     Text(tr("%d items couldn't be removed (in use, protected or owned by another user).", failed)).font(.caption).foregroundStyle(.orange)
                 }
+                if let reason = model.adminError {
+                    Text(reason).font(.caption2).foregroundStyle(.red.opacity(0.9)).lineLimit(3).textSelection(.enabled)
+                }
             }
         case .idle:
             Text(tr("%@ selected · %@ found", bytes(model.selectedSize), bytes(model.totalSize))).foregroundStyle(.secondary)

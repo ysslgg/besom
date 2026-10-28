@@ -20,6 +20,8 @@ final class CleanerModel: ObservableObject {
     @Published private(set) var hasScanned = false
     /// Éléments que le compte normal n'a pas pu supprimer (droits insuffisants).
     @Published private(set) var adminItems: [CleanItem] = []
+    /// Raison du dernier échec de la suppression avec mot de passe.
+    @Published private(set) var adminError: String?
 
     private var seen: Set<String> = []
     private var scanTask: Task<Void, Never>?
@@ -137,16 +139,26 @@ final class CleanerModel: ObservableObject {
     }
 
     /// Relance la suppression des éléments protégés, avec le mot de passe administrateur.
+    /// Pour la Corbeille, c'est le Finder qui s'en charge (il gère les dossiers appartenant à root).
     func cleanWithAdmin() {
         guard !isBusy, !adminItems.isEmpty else { return }
         let items = adminItems
+        adminError = nil
         phase = .cleaning(done: 0, total: items.count)
         Task { [weak self] in
-            _ = await Task.detached(priority: .userInitiated) { Remover.removeAsAdmin(items) }.value
+            let error: String? = await Task.detached(priority: .userInitiated) {
+                let trash = items.filter { $0.category == .trash }
+                let others = items.filter { $0.category != .trash }
+                var message: String?
+                if !trash.isEmpty { message = Remover.emptyTrashViaFinder() }
+                if !others.isEmpty, let e = Remover.removeAsAdmin(others) { message = message ?? e }
+                return message
+            }.value
             guard let self else { return }
             let gone = items.filter { !FileManager.default.fileExists(atPath: $0.url.path) }
             let remaining = items.filter { FileManager.default.fileExists(atPath: $0.url.path) }
             self.adminItems = remaining
+            self.adminError = remaining.isEmpty ? nil : (error ?? tr("Some items are still there."))
             self.phase = .done(freed: gone.reduce(0) { $0 + $1.size }, trashed: 0, failed: remaining.count)
             await self.rescanKeepingSummary()
         }

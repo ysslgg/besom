@@ -15,6 +15,7 @@
     <key>LSMinimumSystemVersion</key><string>14.0</string>
     <key>LSUIElement</key><true/>
     <key>NSHighResolutionCapable</key><true/>
+    <key>NSAppleEventsUsageDescription</key><string>Besom asks Finder to empty the Trash when some items belong to another user and need your administrator password.</string>
     <key>NSDesktopFolderUsageDescription</key><string>Besom measures the size of your Desktop to show where your storage goes. Nothing is removed without your confirmation.</string>
     <key>NSDocumentsFolderUsageDescription</key><string>Besom measures the size of your Documents folder to show where your storage goes. Nothing is removed without your confirmation.</string>
     <key>NSDownloadsFolderUsageDescription</key><string>Besom measures your Downloads folder and looks for old installers in it. Nothing is removed without your confirmation.</string>
