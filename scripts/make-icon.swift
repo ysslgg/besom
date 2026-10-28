@@ -1,4 +1,4 @@
-// Génère l'icône de Besom. Usage : swift scripts/make-icon.swift <sortie.png> [a|b|c|d|e|f|g|h|i]
+// Génère l'icône de Besom. Usage : swift scripts/make-icon.swift <sortie.png> [a…j]
 import AppKit
 import CoreGraphics
 
@@ -165,6 +165,32 @@ case "g":
     sparkle(CGPoint(x: 560, y: 480), 190, col(1, 1, 1), glow: col(0.6, 1, 0.95, 1))
     sparkle(CGPoint(x: 780, y: 760), 52, col(1, 1, 1, 0.9))
     sparkle(CGPoint(x: 250, y: 330), 40, col(1, 1, 1, 0.85))
+
+case "j":
+    // Rafales de vent sur fond bleu : tout ce qui traîne s'envole
+    ctx.drawLinearGradient(grad([col(0.40, 0.80, 0.98), col(0.18, 0.55, 0.92), col(0.30, 0.30, 0.80)], [0, 0.55, 1]),
+                           start: CGPoint(x: 150, y: 950), end: CGPoint(x: 850, y: 100), options: [])
+    radial(CGPoint(x: 780, y: 850), 520, col(1, 1, 1, 0.5), col(1, 1, 1, 0))
+    ctx.setLineCap(.round); ctx.setLineJoin(.round); ctx.setLineWidth(64)
+    func wind(_ build: (CGMutablePath) -> Void, _ alpha: CGFloat) {
+        let p = CGMutablePath(); build(p)
+        ctx.saveGState()
+        ctx.setShadow(offset: CGSize(width: 0, height: -10), blur: 22, color: col(0, 0.15, 0.4, 0.35))
+        ctx.addPath(p); ctx.setStrokeColor(col(1, 1, 1, alpha)); ctx.strokePath()
+        ctx.restoreGState()
+    }
+    wind({ p in
+        p.move(to: CGPoint(x: 220, y: 650)); p.addLine(to: CGPoint(x: 600, y: 650))
+        p.addArc(center: CGPoint(x: 600, y: 730), radius: 80, startAngle: -.pi / 2, endAngle: .pi * 0.9, clockwise: false)
+    }, 1)
+    wind({ p in
+        p.move(to: CGPoint(x: 280, y: 510)); p.addLine(to: CGPoint(x: 740, y: 510))
+        p.addArc(center: CGPoint(x: 740, y: 430), radius: 80, startAngle: .pi / 2, endAngle: -.pi * 0.9, clockwise: true)
+    }, 0.92)
+    wind({ p in
+        p.move(to: CGPoint(x: 220, y: 370)); p.addLine(to: CGPoint(x: 500, y: 370))
+        p.addArc(center: CGPoint(x: 500, y: 300), radius: 70, startAngle: .pi / 2, endAngle: -.pi * 0.9, clockwise: true)
+    }, 0.8)
 
 case "d":
     // Balai de verre, monochrome blanc sur fond riche
