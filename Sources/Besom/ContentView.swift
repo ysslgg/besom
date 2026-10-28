@@ -379,6 +379,14 @@ private struct FooterBar: View {
         HStack(spacing: 14) {
             status
             Spacer()
+            if !model.adminItems.isEmpty, !model.isBusy {
+                Button { model.cleanWithAdmin() } label: {
+                    Label(tr("Delete with password (%d)", model.adminItems.count), systemImage: "lock.open.fill")
+                }
+                .glassButton()
+                .controlSize(.large)
+                .help(tr("Some folders belong to another user (root). macOS will ask for your administrator password."))
+            }
             Button { if Prefs.shared.confirmBeforeClean { model.confirming = true } else { model.clean() } } label: {
                 Text(tr("Clean %@", bytes(model.selectedSize))).fontWeight(.semibold).frame(minWidth: 120)
             }
@@ -406,7 +414,7 @@ private struct FooterBar: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(summary(freed: freed, trashed: trashed)).fontWeight(.semibold).foregroundStyle(.green)
                 if failed > 0 {
-                    Text(tr("%d items couldn't be removed (in use or protected).", failed)).font(.caption).foregroundStyle(.orange)
+                    Text(tr("%d items couldn't be removed (in use, protected or owned by another user).", failed)).font(.caption).foregroundStyle(.orange)
                 }
             }
         case .idle:

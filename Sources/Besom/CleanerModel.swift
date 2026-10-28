@@ -18,6 +18,8 @@ final class CleanerModel: ObservableObject {
     @Published var confirming = false
     @Published private(set) var lastScan: Date?
     @Published private(set) var hasScanned = false
+    /// Éléments que le compte normal n'a pas pu supprimer (droits insuffisants).
+    @Published private(set) var adminItems: [CleanItem] = []
 
     private var seen: Set<String> = []
     private var scanTask: Task<Void, Never>?
@@ -124,11 +126,28 @@ final class CleanerModel: ObservableObject {
                 }
             }.value
             guard let self else { return }
+            self.adminItems = report.needsAdmin
             self.phase = .done(freed: report.freed, trashed: report.trashed, failed: report.failed + report.refused)
             if Prefs.shared.haptics {
                 NSHapticFeedbackManager.defaultPerformer.perform(.levelChange, performanceTime: .default)
             }
             // Réanalyse pour refléter l'état réel du disque, en gardant le message de bilan affiché.
+            await self.rescanKeepingSummary()
+        }
+    }
+
+    /// Relance la suppression des éléments protégés, avec le mot de passe administrateur.
+    func cleanWithAdmin() {
+        guard !isBusy, !adminItems.isEmpty else { return }
+        let items = adminItems
+        phase = .cleaning(done: 0, total: items.count)
+        Task { [weak self] in
+            _ = await Task.detached(priority: .userInitiated) { Remover.removeAsAdmin(items) }.value
+            guard let self else { return }
+            let gone = items.filter { !FileManager.default.fileExists(atPath: $0.url.path) }
+            let remaining = items.filter { FileManager.default.fileExists(atPath: $0.url.path) }
+            self.adminItems = remaining
+            self.phase = .done(freed: gone.reduce(0) { $0 + $1.size }, trashed: 0, failed: remaining.count)
             await self.rescanKeepingSummary()
         }
     }

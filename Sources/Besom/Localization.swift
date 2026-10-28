@@ -10,6 +10,9 @@ func tr(_ english: String, _ args: CVarArg...) -> String {
 
 enum Localization {
     static let fr: [String: String] = [
+        "Delete with password (%d)": "Supprimer avec le mot de passe (%d)",
+        "Some folders belong to another user (root). macOS will ask for your administrator password.": "Certains dossiers appartiennent à un autre utilisateur (root). macOS te demandera ton mot de passe administrateur.",
+        "%d items couldn't be removed (in use, protected or owned by another user).": "%d éléments n'ont pas pu être supprimés (utilisés, protégés ou appartenant à un autre utilisateur).",
         "Clear": "Transparent",
         "Regular": "Standard",
         "System": "Système",
