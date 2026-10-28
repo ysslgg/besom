@@ -18,9 +18,7 @@ final class CleanerModel: ObservableObject {
     @Published var confirming = false
     @Published private(set) var lastScan: Date?
     @Published private(set) var hasScanned = false
-    /// Éléments que le compte normal n'a pas pu supprimer (droits insuffisants).
-    @Published private(set) var adminItems: [CleanItem] = []
-    /// Raison du dernier échec de la suppression avec mot de passe.
+    /// Raison de l'échec de la suppression protégée par mot de passe (annulée, refusée…).
     @Published private(set) var adminError: String?
 
     private var seen: Set<String> = []
@@ -128,8 +126,18 @@ final class CleanerModel: ObservableObject {
                 }
             }.value
             guard let self else { return }
-            self.adminItems = report.needsAdmin
-            self.phase = .done(freed: report.freed, trashed: report.trashed, failed: report.failed + report.refused)
+            var freed = report.freed
+            var failed = report.failed + report.refused
+            self.adminError = nil
+            // Éléments protégés (par ex. dossiers appartenant à root) : macOS demande le mot de passe tout de suite.
+            if !report.needsAdmin.isEmpty {
+                self.phase = .cleaning(done: items.count, total: items.count)
+                let outcome = await self.elevate(report.needsAdmin)
+                freed += outcome.freed
+                failed = failed - report.needsAdmin.count + outcome.remaining.count
+                self.adminError = outcome.error
+            }
+            self.phase = .done(freed: freed, trashed: report.trashed, failed: failed)
             if Prefs.shared.haptics {
                 NSHapticFeedbackManager.defaultPerformer.perform(.levelChange, performanceTime: .default)
             }
@@ -138,30 +146,21 @@ final class CleanerModel: ObservableObject {
         }
     }
 
-    /// Relance la suppression des éléments protégés, avec le mot de passe administrateur.
-    /// Pour la Corbeille, c'est le Finder qui s'en charge (il gère les dossiers appartenant à root).
-    func cleanWithAdmin() {
-        guard !isBusy, !adminItems.isEmpty else { return }
-        let items = adminItems
-        adminError = nil
-        phase = .cleaning(done: 0, total: items.count)
-        Task { [weak self] in
-            let error: String? = await Task.detached(priority: .userInitiated) {
-                let trash = items.filter { $0.category == .trash }
-                let others = items.filter { $0.category != .trash }
-                var message: String?
-                if !trash.isEmpty { message = Remover.emptyTrashViaFinder() }
-                if !others.isEmpty, let e = Remover.removeAsAdmin(others) { message = message ?? e }
-                return message
-            }.value
-            guard let self else { return }
-            let gone = items.filter { !FileManager.default.fileExists(atPath: $0.url.path) }
-            let remaining = items.filter { FileManager.default.fileExists(atPath: $0.url.path) }
-            self.adminItems = remaining
-            self.adminError = remaining.isEmpty ? nil : (error ?? tr("Some items are still there."))
-            self.phase = .done(freed: gone.reduce(0) { $0 + $1.size }, trashed: 0, failed: remaining.count)
-            await self.rescanKeepingSummary()
-        }
+    /// Supprime avec les droits administrateur. Pour la Corbeille, c'est le Finder qui s'en charge
+    /// (il gère les dossiers appartenant à root et demande lui-même le mot de passe).
+    private func elevate(_ items: [CleanItem]) async -> (freed: Int64, remaining: [CleanItem], error: String?) {
+        let error: String? = await Task.detached(priority: .userInitiated) {
+            let trash = items.filter { $0.category == .trash }
+            let others = items.filter { $0.category != .trash }
+            var message: String?
+            if !trash.isEmpty { message = Remover.emptyTrashViaFinder() }
+            if !others.isEmpty, let e = Remover.removeAsAdmin(others) { message = message ?? e }
+            return message
+        }.value
+        let fm = FileManager.default
+        let gone = items.filter { !fm.fileExists(atPath: $0.url.path) }
+        let remaining = items.filter { fm.fileExists(atPath: $0.url.path) }
+        return (gone.reduce(0) { $0 + $1.size }, remaining, remaining.isEmpty ? nil : (error ?? tr("Some items are still there.")))
     }
 
     private func rescanKeepingSummary() async {

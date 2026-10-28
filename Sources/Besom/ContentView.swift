@@ -379,14 +379,6 @@ private struct FooterBar: View {
         HStack(spacing: 14) {
             status
             Spacer()
-            if !model.adminItems.isEmpty, !model.isBusy {
-                Button { model.cleanWithAdmin() } label: {
-                    Label(tr("Delete with password (%d)", model.adminItems.count), systemImage: "lock.open.fill")
-                }
-                .glassButton()
-                .controlSize(.large)
-                .help(tr("Some folders belong to another user (root). macOS will ask for your administrator password."))
-            }
             Button { if Prefs.shared.confirmBeforeClean { model.confirming = true } else { model.clean() } } label: {
                 Text(tr("Clean %@", bytes(model.selectedSize))).fontWeight(.semibold).frame(minWidth: 120)
             }
