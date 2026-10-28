@@ -9,18 +9,27 @@ func bytes(_ n: Int64) -> String {
 }
 
 enum Page: Hashable {
+    var isCategory: Bool { if case .category = self { true } else { false } }
     case overview
     case settings
+    case homebrew
+    case updates
     case category(CategoryID)
 }
 
 struct ContentView: View {
     @ObservedObject var model: CleanerModel
     @ObservedObject var storage: StorageModel
+    @ObservedObject var brew: BrewModel
     @ObservedObject private var prefs = Prefs.shared
     @State private var page: Page = {
         // BESOM_PAGE=trash (par exemple) ouvre directement une famille : pratique pour tester l'interface.
-        if ProcessInfo.processInfo.environment["BESOM_PAGE"] == "settings" { return .settings }
+        switch ProcessInfo.processInfo.environment["BESOM_PAGE"] {
+        case "settings": return .settings
+        case "homebrew": return .homebrew
+        case "updates": return .updates
+        default: break
+        }
         if let raw = ProcessInfo.processInfo.environment["BESOM_PAGE"], let id = CategoryID(rawValue: raw) { return .category(id) }
         return .overview
     }()
@@ -29,12 +38,14 @@ struct ContentView: View {
         ZStack {
             AuroraBackground()
             HStack(spacing: 0) {
-                Sidebar(model: model, storage: storage, page: $page)
+                Sidebar(model: model, storage: storage, brew: brew, page: $page)
                 ZStack(alignment: .bottom) {
                     Group {
                         switch page {
                         case .overview: OverviewView(storage: storage, model: model)
                         case .settings: SettingsPage()
+                        case .homebrew: HomebrewPage(brew: brew)
+                        case .updates: UpdatesPage(brew: brew)
                         case .category(let id): DetailView(model: model, id: id)
                         }
                     }
@@ -42,12 +53,12 @@ struct ContentView: View {
                     .mask {
                         VStack(spacing: 0) {
                             Rectangle()
-                            if page != .settings {
+                            if page == .overview || page.isCategory {
                                 LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom).frame(height: 96)
                             }
                         }
                     }
-                    if page != .settings {
+                    if page == .overview || page.isCategory {
                         FooterBar(model: model)
                             .padding(.horizontal, 22)
                             .padding(.bottom, 16)
@@ -63,7 +74,7 @@ struct ContentView: View {
             Text(confirmationMessage)
         }
         .tint(prefs.theme.accent)
-        .onAppear { if storage.phase == .idle { storage.refresh() } }
+        .onAppear { storage.refreshIfNeeded() }
         .onReceive(NotificationCenter.default.publisher(for: .openSettingsPage)) { _ in page = .settings }
         // Quand on quitte les Réglages après avoir changé une règle, on relance l'analyse.
         .onChange(of: page) { old, _ in
@@ -101,7 +112,9 @@ private struct SelectionBox: View {
 private struct Sidebar: View {
     @ObservedObject var model: CleanerModel
     @ObservedObject var storage: StorageModel
+    @ObservedObject var brew: BrewModel
     @Binding var page: Page
+    @Environment(\.colorScheme) private var scheme
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -135,6 +148,18 @@ private struct Sidebar: View {
                         Text(tr("Overview")).fontWeight(.medium)
                         Spacer()
                     }
+                    sectionTitle(tr("Manage")).padding(.top, 10)
+                    NavRow(selected: page == .homebrew, tint: .orange) { page = .homebrew } content: {
+                        iconBadge("shippingbox.fill", .orange)
+                        Text("Homebrew").fontWeight(.medium)
+                        Spacer()
+                    }
+                    NavRow(selected: page == .updates, tint: .green) { page = .updates } content: {
+                        iconBadge("arrow.triangle.2.circlepath", .green)
+                        Text(tr("Updates")).fontWeight(.medium)
+                        Spacer()
+                        if brew.updateCount > 0 { Pill(text: "\(brew.updateCount)", tint: .green) }
+                    }
                     sectionTitle(tr("Clean")).padding(.top, 10)
                     ForEach(CategoryID.allCases) { id in
                         CategoryNavRow(model: model, id: id, selected: page == .category(id)) { page = .category(id) }
@@ -155,6 +180,8 @@ private struct Sidebar: View {
         }
         .frame(width: 318)
         .frame(maxHeight: .infinity)
+        // Panneau plus clair que le reste : un voile blanc sous le verre.
+        .background(RoundedRectangle(cornerRadius: 30, style: .continuous).fill(.white.opacity(scheme == .dark ? 0.16 : 0.38)))
         .glassCard(radius: 30)
         .padding(.leading, 10).padding(.vertical, 10).padding(.trailing, 4)
     }

@@ -170,6 +170,9 @@ struct SettingsPage: View {
                     .labelsHidden().frame(width: 110)
                 }
             }
+            SettingRow(title: tr("Pause automatic scans on battery"), subtitle: tr("Saves energy. Also paused in Low Power Mode. You can still scan by hand.")) {
+                Toggle("", isOn: $prefs.skipOnBattery).toggleStyle(.switch).labelsHidden()
+            }
             SettingRow(title: tr("Ask before cleaning"), subtitle: tr("Shows a confirmation with what is deleted and what goes to the Trash.")) {
                 Toggle("", isOn: $prefs.confirmBeforeClean).toggleStyle(.switch).labelsHidden()
             }

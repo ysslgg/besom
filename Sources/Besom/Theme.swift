@@ -73,6 +73,14 @@ extension View {
 
 /// Fond coloré et doux, qui donne au verre quelque chose à réfracter.
 struct AuroraBackground: View {
+    private func blob(_ color: Color, x: CGFloat, y: CGFloat, r: CGFloat, in size: CGSize) -> some View {
+        let radius = size.width * r
+        return Circle()
+            .fill(RadialGradient(colors: [color.opacity(0.95), color.opacity(0)], center: .center, startRadius: 0, endRadius: radius))
+            .frame(width: radius * 2, height: radius * 2)
+            .position(x: size.width * x, y: size.height * y)
+    }
+
     @Environment(\.colorScheme) private var scheme
     @ObservedObject private var prefs = Prefs.shared
 
@@ -82,15 +90,12 @@ struct AuroraBackground: View {
         let sat = prefs.theme.saturation
         ZStack {
             (dark ? Color(red: 0.05, green: 0.07, blue: 0.09) : Color(red: 0.94, green: 0.96, blue: 0.97))
+            // Dégradés radiaux (aucun flou) : même rendu doux, bien moins de travail pour le processeur graphique.
             GeometryReader { g in
-                Circle().fill(Color(hue: h[0], saturation: sat * 1.05, brightness: dark ? 0.75 : 0.95))
-                    .frame(width: g.size.width * 0.7).offset(x: -g.size.width * 0.15, y: -g.size.height * 0.25)
-                Circle().fill(Color(hue: h[1], saturation: sat * 0.95, brightness: dark ? 0.70 : 1.0))
-                    .frame(width: g.size.width * 0.55).offset(x: g.size.width * 0.55, y: g.size.height * 0.05)
-                Circle().fill(Color(hue: h[2], saturation: sat * 0.80, brightness: dark ? 0.60 : 0.95))
-                    .frame(width: g.size.width * 0.6).offset(x: g.size.width * 0.1, y: g.size.height * 0.62)
+                blob(Color(hue: h[0], saturation: sat * 1.05, brightness: dark ? 0.75 : 0.95), x: -0.05, y: -0.05, r: 0.55, in: g.size)
+                blob(Color(hue: h[1], saturation: sat * 0.95, brightness: dark ? 0.70 : 1.0), x: 0.85, y: 0.25, r: 0.45, in: g.size)
+                blob(Color(hue: h[2], saturation: sat * 0.80, brightness: dark ? 0.60 : 0.95), x: 0.40, y: 0.95, r: 0.50, in: g.size)
             }
-            .blur(radius: 90)
             .opacity(prefs.auroraIntensity)
         }
         .ignoresSafeArea()

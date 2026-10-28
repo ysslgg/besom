@@ -1,5 +1,16 @@
 import SwiftUI
 import ServiceManagement
+import IOKit.ps
+
+/// État d'alimentation du Mac : les analyses automatiques s'effacent sur batterie ou en mode économie d'énergie.
+enum Power {
+    static var onBattery: Bool {
+        guard let info = IOPSCopyPowerSourcesInfo()?.takeRetainedValue(),
+              let type = IOPSGetProvidingPowerSourceType(info)?.takeRetainedValue() as String? else { return false }
+        return type == kIOPSBatteryPowerValue
+    }
+    static var lowPowerMode: Bool { ProcessInfo.processInfo.isLowPowerModeEnabled }
+}
 
 /// Langues de l'interface : celle du système au premier lancement (français ou anglais), modifiable ensuite.
 enum AppLanguage: String, CaseIterable, Identifiable {
@@ -105,6 +116,8 @@ final class Prefs: ObservableObject {
     @Published var haptics: Bool { didSet { d.set(haptics, forKey: "haptics") } }
     @Published var autoScan: Bool { didSet { d.set(autoScan, forKey: "autoScan") } }
     @Published var scanHours: Int { didSet { d.set(scanHours, forKey: "scanHours") } }
+    /// Pas d'analyse automatique sur batterie (économise l'énergie) ; le bouton d'analyse reste disponible.
+    @Published var skipOnBattery: Bool { didSet { d.set(skipOnBattery, forKey: "skipOnBattery") } }
     @Published var confirmBeforeClean: Bool { didSet { d.set(confirmBeforeClean, forKey: "confirmBeforeClean") } }
     @Published var launchAtLogin: Bool {
         didSet {
@@ -174,6 +187,7 @@ final class Prefs: ObservableObject {
         haptics = bool("haptics")
         autoScan = bool("autoScan")
         scanHours = int("scanHours", 3)
+        skipOnBattery = bool("skipOnBattery")
         confirmBeforeClean = bool("confirmBeforeClean")
         launchAtLogin = SMAppService.mainApp.status == .enabled
         glassStyle = GlassStyle(rawValue: d.string(forKey: "glassStyle") ?? "") ?? .regular

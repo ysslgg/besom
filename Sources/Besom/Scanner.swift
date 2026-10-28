@@ -200,28 +200,23 @@ enum Scanner {
 
     // MARK: Tailles
 
-    /// Taille réellement occupée sur le disque, mesurée en parallèle.
-    private static func measure(_ urls: [URL]) -> [Int64] {
-        var sizes = [Int64](repeating: 0, count: urls.count)
-        sizes.withUnsafeMutableBufferPointer { buffer in
-            let out = buffer
-            DispatchQueue.concurrentPerform(iterations: urls.count) { i in
-                out[i] = allocatedSize(of: urls[i])
-            }
-        }
-        return sizes
-    }
+    /// Taille réellement occupée sur le disque, mesurée en parallèle (concurrence limitée pour ménager la batterie).
+    private static func measure(_ urls: [URL]) -> [Int64] { StorageScan.sizes(urls) }
 
+    /// Taille occupée sur le disque : parcours avec `fts` (bien plus léger que FileManager : pas d'objet URL par fichier).
     static func allocatedSize(of url: URL) -> Int64 {
-        let keys: [URLResourceKey] = [.totalFileAllocatedSizeKey, .fileAllocatedSizeKey, .isDirectoryKey]
-        func size(_ v: URLResourceValues) -> Int64 { Int64(v.totalFileAllocatedSize ?? v.fileAllocatedSize ?? 0) }
-        guard let root = try? url.resourceValues(forKeys: Set(keys)) else { return 0 }
-        guard root.isDirectory == true else { return size(root) }
-        guard let walker = fm.enumerator(at: url, includingPropertiesForKeys: keys, options: [],
-                                         errorHandler: { _, _ in true }) else { return 0 }
+        guard let path = strdup(url.path) else { return 0 }
+        defer { free(path) }
+        var argv: [UnsafeMutablePointer<CChar>?] = [path, nil]
+        guard let tree = fts_open(&argv, FTS_PHYSICAL | FTS_NOCHDIR | FTS_XDEV, nil) else { return 0 }
+        defer { fts_close(tree) }
         var total: Int64 = 0
-        for case let file as URL in walker {
-            if let v = try? file.resourceValues(forKeys: Set(keys)) { total += size(v) }
+        while let entry = fts_read(tree) {
+            switch Int32(entry.pointee.fts_info) {
+            case FTS_F, FTS_D, FTS_SL, FTS_SLNONE, FTS_DEFAULT:
+                if let st = entry.pointee.fts_statp { total += Int64(st.pointee.st_blocks) * 512 }
+            default: break
+            }
         }
         return total
     }

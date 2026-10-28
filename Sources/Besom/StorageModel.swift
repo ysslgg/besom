@@ -113,11 +113,30 @@ enum StorageScan {
         return out
     }
 
+    /// Nombre de mesures simultanées : un tiers des cœurs, pour ne pas faire chauffer le Mac.
+    static var concurrency: Int { max(2, ProcessInfo.processInfo.activeProcessorCount / 3) }
+
+    private static func queue() -> OperationQueue {
+        let q = OperationQueue()
+        q.maxConcurrentOperationCount = concurrency
+        q.qualityOfService = .utility
+        return q
+    }
+
     /// Mesure toutes les unités ; `each` est appelé (depuis des threads de fond) à mesure qu'elles se terminent.
     static func measure(_ units: [StorageUnit], each: @escaping @Sendable (Int, Int64) -> Void) {
-        DispatchQueue.concurrentPerform(iterations: units.count) { i in
-            each(i, Scanner.allocatedSize(of: units[i].url))
-        }
+        let q = queue()
+        for i in units.indices { q.addOperation { each(i, Scanner.allocatedSize(of: units[i].url)) } }
+        q.waitUntilAllOperationsAreFinished()
+    }
+
+    /// Tailles occupées sur le disque (même ordre que `urls`).
+    static func sizes(_ urls: [URL]) -> [Int64] {
+        let box = SizeBox(count: urls.count)
+        let q = queue()
+        for i in urls.indices { q.addOperation { box.set(i, Scanner.allocatedSize(of: urls[i])) } }
+        q.waitUntilAllOperationsAreFinished()
+        return box.values
     }
 
     static func volume() -> (name: String, total: Int64, free: Int64) {
@@ -139,15 +158,55 @@ final class StorageModel: ObservableObject {
     @Published private(set) var slices: [StorageSlice] = []
     @Published private(set) var folders: [FolderUsage] = []
 
+    @Published private(set) var measuredAt: Date?
+
     private var measured: [Int: Int64] = [:]
     private var units: [StorageUnit] = []
+    private var lastPublish = Date.distantPast
+
+    private struct CacheEntry: Codable { let path: String; let label: String; let group: String; let size: Int64 }
+    private struct CacheFile: Codable { let date: Date; let entries: [CacheEntry] }
+
+    init() {
+        // Dernière mesure enregistrée : affichée tout de suite, sans reparcourir le disque.
+        if let data = UserDefaults.standard.data(forKey: "storageCache"),
+           let file = try? JSONDecoder().decode(CacheFile.self, from: data) {
+            units = file.entries.map { StorageUnit(url: URL(fileURLWithPath: $0.path), label: $0.label, group: StorageGroup(rawValue: $0.group) ?? .other) }
+            for (i, e) in file.entries.enumerated() { measured[i] = e.size }
+            measuredAt = file.date
+            updateVolume()
+            phase = .done
+            rebuild()
+        }
+    }
+
+    private func updateVolume() {
+        let v = StorageScan.volume()
+        volumeName = v.name; total = v.total; free = v.free
+    }
+
+    private func saveCache() {
+        let entries = measured.sorted { $0.key < $1.key }.map { i, size in
+            CacheEntry(path: units[i].url.path, label: units[i].label, group: units[i].group.rawValue, size: size)
+        }
+        if let data = try? JSONEncoder().encode(CacheFile(date: Date(), entries: entries)) {
+            UserDefaults.standard.set(data, forKey: "storageCache")
+        }
+    }
+
+    /// Ne remesure que si la dernière mesure est ancienne (6 h) ; sinon met seulement à jour l'espace libre.
+    func refreshIfNeeded() {
+        updateVolume()
+        guard phase != .measuring else { return }
+        if let measuredAt, Date().timeIntervalSince(measuredAt) < 6 * 3600 { rebuild(); return }
+        refresh()
+    }
 
     var used: Int64 { max(0, total - free) }
 
     func refresh() {
         guard phase != .measuring else { return }
-        let v = StorageScan.volume()
-        volumeName = v.name; total = v.total; free = v.free
+        updateVolume()
         phase = .measuring
         progress = 0
         measured = [:]
@@ -164,6 +223,10 @@ final class StorageModel: ObservableObject {
 
     private func record(_ index: Int, _ size: Int64) {
         measured[index] = size
+        // Mises à jour de l'affichage groupées (quelques fois par seconde) : évite de redessiner les graphiques à chaque dossier.
+        let now = Date()
+        guard now.timeIntervalSince(lastPublish) > 0.5 else { return }
+        lastPublish = now
         progress = Double(measured.count) / Double(max(units.count, 1))
         rebuild()
     }
@@ -171,6 +234,8 @@ final class StorageModel: ObservableObject {
     private func finish() {
         phase = .done
         progress = 1
+        measuredAt = Date()
+        saveCache()
         rebuild()
     }
 

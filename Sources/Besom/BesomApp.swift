@@ -8,7 +8,7 @@ struct BesomApp: App {
 
     var body: some Scene {
         Window("Besom", id: "main") {
-            ContentView(model: delegate.model, storage: delegate.storage)
+            ContentView(model: delegate.model, storage: delegate.storage, brew: delegate.brew)
                 .frame(minWidth: 960, minHeight: 640)
                 // Changer de langue reconstruit l'interface avec les nouveaux textes.
                 .id(settings.language.rawValue)
@@ -38,6 +38,7 @@ func openFullDiskAccess() {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let model = CleanerModel()
     let storage = StorageModel()
+    let brew = BrewModel()
     private var timer: Timer?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -71,17 +72,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         DispatchQueue.main.async { NSApp.windows.forEach { $0.isMovableByWindowBackground = true } }
         NSApp.activate(ignoringOtherApps: true)
         model.scan()
+        // Vérification discrète des mises à jour, un peu après le lancement.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 4) { [weak self] in self?.brew.checkQuietly() }
         // Rafraîchit de temps en temps si l'app reste ouverte.
         let t = Timer(timeInterval: 1800, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated {
                 guard let self, Prefs.shared.autoScan, !self.model.isBusy else { return }
+                if Power.lowPowerMode || (Prefs.shared.skipOnBattery && Power.onBattery) { return }
                 let age = self.model.lastScan.map { Date().timeIntervalSince($0) } ?? .infinity
                 guard age >= Double(Prefs.shared.scanHours) * 3600 - 60 else { return }
                 self.model.scan()
-                self.storage.refresh()
+                self.storage.refreshIfNeeded()
             }
         }
-        t.tolerance = 120
+        t.tolerance = 300
         RunLoop.main.add(t, forMode: .common)
         timer = t
     }
