@@ -63,6 +63,8 @@ struct HomebrewPage: View {
                     .padding(.horizontal, 16).padding(.vertical, 10).glassCard(radius: 16)
             }
 
+            if brew.brewPath != nil { TerminalPanel(lines: brew.log, busy: brew.busy, onClear: brew.clearLog) }
+
             if brew.brewPath == nil && brew.loaded {
                 ContentUnavailableView(tr("Homebrew is not installed."), systemImage: "shippingbox",
                                        description: Text(tr("Install it from brew.sh, then come back here.")))
@@ -81,7 +83,6 @@ struct HomebrewPage: View {
                     }
                 }
             }
-            if !brew.log.isEmpty { LogConsole(lines: brew.log) }
         }
         .onAppear { if !brew.loaded { brew.refresh() } }
         .confirmationDialog(tr("Remove %@?", toRemove?.name ?? ""), isPresented: Binding(get: { toRemove != nil }, set: { if !$0 { toRemove = nil } }),
@@ -132,7 +133,7 @@ struct UpdatesPage: View {
     var body: some View {
         PageScroll {
             PageHeader(title: tr("Updates"),
-                       subtitle: brew.updateCount == 0 ? tr("Everything is up to date.") : tr("%d updates available", brew.updateCount),
+                       subtitle: brew.updateCount == 0 ? tr("Everything is up to date.") : (brew.updateCount == 1 ? tr("%d update available", 1) : tr("%d updates available", brew.updateCount)),
                        symbol: "arrow.triangle.2.circlepath", tint: Color(hue: 0.38, saturation: 0.6, brightness: 0.85)) {
                 HStack(spacing: 8) {
                     Button { brew.refresh(updateIndex: true) } label: { Label(tr("Check now"), systemImage: "arrow.clockwise") }
@@ -145,6 +146,7 @@ struct UpdatesPage: View {
                 HStack(spacing: 10) { ProgressView().controlSize(.small); Text(busy).foregroundStyle(.secondary); Spacer() }
                     .padding(.horizontal, 16).padding(.vertical, 10).glassCard(radius: 16)
             }
+            TerminalPanel(lines: brew.log, busy: brew.busy, onClear: brew.clearLog)
             if let last = brew.lastChecked {
                 Text(tr("Last checked %@", last.formatted(date: .omitted, time: .shortened)))
                     .font(.caption).foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 6)
@@ -176,7 +178,6 @@ struct UpdatesPage: View {
                 }
                 .glassButton()
             }
-            if !brew.log.isEmpty { LogConsole(lines: brew.log) }
         }
         .onAppear { if !brew.loaded { brew.refresh() } }
     }

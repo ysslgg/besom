@@ -10,6 +10,9 @@ func tr(_ english: String, _ args: CVarArg...) -> String {
 
 enum Localization {
     static let fr: [String: String] = [
+        "Clear output": "Effacer",
+        "%d update available": "%d mise à jour disponible",
+        "Commands and their output show up here as they run.": "Les commandes et leur sortie s'affichent ici pendant leur exécution.",
         "Manage": "Gérer",
         "Updates": "Mises à jour",
         "Updating Homebrew index…": "Mise à jour de l'index Homebrew…",

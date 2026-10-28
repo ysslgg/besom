@@ -75,25 +75,53 @@ struct Pill: View {
     }
 }
 
-/// Console de sortie des commandes (Homebrew…).
-struct LogConsole: View {
+/// Terminal : montre en direct les commandes lancées et leur sortie.
+struct TerminalPanel: View {
     let lines: [String]
+    var busy: String?
+    var onClear: () -> Void
 
     var body: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                VStack(alignment: .leading, spacing: 1) {
-                    ForEach(lines.indices, id: \.self) { i in
-                        Text(lines[i]).font(.system(size: 11, design: .monospaced)).foregroundStyle(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .leading).textSelection(.enabled).id(i)
-                    }
-                }
-                .padding(12)
+        VStack(spacing: 0) {
+            HStack(spacing: 6) {
+                Circle().fill(.red.opacity(0.8)).frame(width: 9, height: 9)
+                Circle().fill(.yellow.opacity(0.8)).frame(width: 9, height: 9)
+                Circle().fill(.green.opacity(0.8)).frame(width: 9, height: 9)
+                Text("Terminal — brew").font(.caption.weight(.medium)).foregroundStyle(.white.opacity(0.6)).padding(.leading, 6)
+                Spacer()
+                if busy != nil { ProgressView().controlSize(.mini).tint(.white) }
+                Button(tr("Clear output"), action: onClear)
+                    .buttonStyle(.plain).font(.caption).foregroundStyle(.white.opacity(lines.isEmpty ? 0.25 : 0.7))
+                    .disabled(lines.isEmpty)
             }
-            .onChange(of: lines.count) { _, n in if n > 0 { proxy.scrollTo(n - 1, anchor: .bottom) } }
+            .padding(.horizontal, 12).padding(.vertical, 8)
+            .background(.white.opacity(0.06))
+
+            do {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 1) {
+                        if lines.isEmpty {
+                            Text(tr("Commands and their output show up here as they run."))
+                                .font(.system(size: 12, design: .monospaced)).foregroundStyle(.white.opacity(0.4))
+                        }
+                        ForEach(lines.indices, id: \.self) { i in
+                            Text(lines[i])
+                                .font(.system(size: 12, design: .monospaced))
+                                .foregroundStyle(lines[i].hasPrefix("$") ? Color(hue: 0.38, saturation: 0.5, brightness: 1) : .white.opacity(0.82))
+                                .frame(maxWidth: .infinity, alignment: .leading).textSelection(.enabled).id(i)
+                        }
+                        if busy != nil { Text("▍").font(.system(size: 12, design: .monospaced)).foregroundStyle(.white.opacity(0.6)) }
+                    }
+                    .padding(12)
+                }
+                // Reste calé en bas quand de nouvelles lignes arrivent (sans faire défiler la page autour).
+                .defaultScrollAnchor(.bottom)
+            }
         }
-        .frame(height: 150)
-        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(.black.opacity(0.18)))
+        .frame(height: 210)
+        .background(Color.black.opacity(0.62))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(.white.opacity(0.12), lineWidth: 1))
     }
 }
 

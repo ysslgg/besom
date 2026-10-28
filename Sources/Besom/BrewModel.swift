@@ -57,7 +57,12 @@ final class BrewModel: ObservableObject {
         var list: [BrewPackage] = []
         var ups: [PackageUpdate] = []
         if let brew = brewPath {
-            if updateIndex { _ = await Shell.run(brew, ["update", "--quiet"]) }
+            if updateIndex {
+                append("$ brew update")
+                let status = await Shell.stream(brew, ["update"]) { line in Task { @MainActor in self.append(line) } }
+                append(status == 0 ? tr("Done.") : tr("Finished with errors (code %d).", Int(status)))
+            }
+            append("$ brew list --versions && brew outdated")
             async let formulas = Shell.run(brew, ["list", "--formula", "--versions"])
             async let casks = Shell.run(brew, ["list", "--cask", "--versions"])
             async let leaves = Shell.run(brew, ["leaves"])
@@ -111,6 +116,8 @@ final class BrewModel: ObservableObject {
     }
 
     // MARK: Actions
+
+    func clearLog() { log = [] }
 
     private func append(_ line: String) {
         log.append(line)
