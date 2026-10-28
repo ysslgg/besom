@@ -10,6 +10,10 @@
 
 Temp files, caches, logs, orphaned app data, old installers, the Trash: Besom finds what can go, shows you exactly what it is, and removes it in one click.
 
+[![Download Besom](https://img.shields.io/badge/%E2%AC%87%EF%B8%8E%20Download-Besom.dmg-14b8a6?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/ysslgg/besom/releases/latest/download/Besom.dmg)
+
+![Latest version](https://img.shields.io/github/v/release/ysslgg/besom?color=14b8a6&label=version)
+
 ![macOS 14+](https://img.shields.io/badge/macOS-14%2B-444?logo=apple&logoColor=white)
 ![Apple Silicon and Intel](https://img.shields.io/badge/Apple%20Silicon%20%2B%20Intel-444)
 ![Swift](https://img.shields.io/badge/Swift-5.9-F05138?logo=swift&logoColor=white)
@@ -48,16 +52,9 @@ Temp files, caches, logs, orphaned app data, old installers, the Trash: Besom fi
 
 ## Installation
 
-There is no download yet: build it from source.
-
-```bash
-git clone https://github.com/ysslgg/besom.git
-cd besom
-./build.sh                # dist/Besom.app  (UNIVERSAL=1 for arm64 + x86_64)
-open dist/Besom.app
-```
-
-macOS 14 or later and the Xcode command line tools are required. The app is signed ad hoc, so on first launch macOS may ask you to open it from **System Settings → Privacy & Security → Open Anyway**.
+1. Download **Besom.dmg** with the button above.
+2. Open the DMG and drag **Besom** into **Applications**.
+3. On first launch, macOS shows a warning because the app is not notarized. Open **System Settings → Privacy & Security**, scroll down to Besom and click **Open Anyway**.
 
 ### Full Disk Access
 
@@ -69,4 +66,5 @@ macOS keeps the Trash and device backups private. To see them, allow Besom in **
 - Orphan detection is a heuristic. It is why those items are never ticked by default and always go through the Trash.
 - Items in use by a running app can fail to delete; Besom reports how many were skipped.
 - The Trash on external volumes is not scanned.
+- The app is not notarized by Apple, hence the warning on first launch.
 - Personal use only, see the [license](LICENSE).

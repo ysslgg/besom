@@ -10,6 +10,10 @@
 
 Fichiers temporaires, caches, journaux, données d'apps orphelines, vieux installeurs, corbeille : Besom repère ce qui peut partir, te montre exactement de quoi il s'agit, et le supprime en un clic.
 
+[![Télécharger Besom](https://img.shields.io/badge/%E2%AC%87%EF%B8%8E%20T%C3%A9l%C3%A9charger-Besom.dmg-14b8a6?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/ysslgg/besom/releases/latest/download/Besom.dmg)
+
+![Dernière version](https://img.shields.io/github/v/release/ysslgg/besom?color=14b8a6&label=version)
+
 ![macOS 14+](https://img.shields.io/badge/macOS-14%2B-444?logo=apple&logoColor=white)
 ![Apple Silicon et Intel](https://img.shields.io/badge/Apple%20Silicon%20%2B%20Intel-444)
 ![Swift](https://img.shields.io/badge/Swift-5.9-F05138?logo=swift&logoColor=white)
@@ -48,16 +52,9 @@ Fichiers temporaires, caches, journaux, données d'apps orphelines, vieux instal
 
 ## Installation
 
-Pas encore de téléchargement : compile-la depuis les sources.
-
-```bash
-git clone https://github.com/ysslgg/besom.git
-cd besom
-./build.sh                # dist/Besom.app  (UNIVERSAL=1 pour arm64 + x86_64)
-open dist/Besom.app
-```
-
-macOS 14 ou plus récent et les outils en ligne de commande Xcode sont nécessaires. L'app est signée ad hoc : au premier lancement, macOS peut demander de l'ouvrir depuis **Réglages Système → Confidentialité et sécurité → Ouvrir quand même**.
+1. Télécharge **Besom.dmg** avec le bouton ci-dessus.
+2. Ouvre le DMG et glisse **Besom** dans **Applications**.
+3. Au premier lancement, macOS affiche un avertissement car l'app n'est pas notarisée. Ouvre **Réglages Système → Confidentialité et sécurité**, descends jusqu'à Besom et clique sur **Ouvrir quand même**.
 
 ### Accès complet au disque
 
@@ -69,4 +66,5 @@ macOS garde la corbeille et les sauvegardes d'appareils privées. Pour les voir,
 - La détection des orphelins est une heuristique. C'est pourquoi ces éléments ne sont jamais cochés d'office et passent toujours par la corbeille.
 - Un élément utilisé par une app ouverte peut ne pas se supprimer ; Besom indique combien ont été ignorés.
 - La corbeille des volumes externes n'est pas analysée.
+- L'app n'est pas notarisée par Apple, d'où l'avertissement au premier lancement.
 - Usage personnel uniquement, voir la [licence](LICENSE).
